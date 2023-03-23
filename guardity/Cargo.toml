@@ -1,0 +1,18 @@
+[package]
+name = "guardity"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+aya = { git = "https://github.com/aya-rs/aya", branch = "main", features=["async_tokio"] }
+aya-log = { git = "https://github.com/aya-rs/aya", branch = "main" }
+guardity-common = { path = "../guardity-common", features = ["user"] }
+anyhow = "1"
+env_logger = "0.10"
+log = "0.4"
+tokio = { version = "1.25", features = ["macros", "rt", "rt-multi-thread", "net", "signal"] }
+
+[[bin]]
+name = "guardity"
+path = "src/main.rs"
