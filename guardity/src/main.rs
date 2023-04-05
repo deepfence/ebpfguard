@@ -1,12 +1,25 @@
+use std::path::PathBuf;
+
 use aya::maps::HashMap;
 use aya::{include_bytes_aligned, Bpf};
 use aya::{programs::Lsm, Btf};
 use aya_log::BpfLogger;
+use clap::Parser;
 use log::{info, warn};
 use tokio::signal;
 
+use guardity::policy::{engine, reader};
+
+#[derive(Debug, Parser)]
+struct Opt {
+    #[clap(long)]
+    policy: Vec<PathBuf>,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    let opt = Opt::parse();
+
     env_logger::init();
 
     // This will include your eBPF object file as raw bytes at compile-time and load it at
@@ -35,6 +48,13 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let mut allowed_ports: HashMap<_, u64, u16> =
         bpf.map_mut("ALLOWED_PORTS").unwrap().try_into()?;
+
+    for p in opt.policy {
+        let policies = reader::read_policies(p)?;
+        for policy in policies {
+            engine::process_policy(&mut bpf, policy)?;
+        }
+    }
 
     info!("Waiting for Ctrl-C...");
     signal::ctrl_c().await?;

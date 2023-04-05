@@ -1,0 +1,6 @@
+- !setuid
+  subject: all
+  allow: false
+- !setuid
+  subject: !process /usr/bin/sudo
+  allow: true

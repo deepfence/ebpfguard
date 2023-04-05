@@ -1,4 +1,5 @@
 use aya::{maps::HashMap, Bpf};
+use log::info;
 
 use super::{Policy, PolicySubject};
 use crate::fs;
@@ -6,6 +7,7 @@ use crate::fs;
 pub const INODE_WILDCARD: u64 = 0;
 
 pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
+    info!("Processing policy: {:?}", policy);
     match policy {
         Policy::SetUid { subject, allow } => {
             let mut allowed_setuid: HashMap<_, u64, u8> =
@@ -16,7 +18,7 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                     if allow {
                         allowed_setuid.insert(&inode, &0, 0)?;
                     } else {
-                        allowed_setuid.remove(&inode)?;
+                        let _ = allowed_setuid.remove(&inode);
                     }
                 }
                 PolicySubject::Container(_) => {
@@ -26,7 +28,7 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                     if allow {
                         allowed_setuid.insert(&INODE_WILDCARD, &0, 0)?;
                     } else {
-                        allowed_setuid.remove(&INODE_WILDCARD)?;
+                        let _ = allowed_setuid.remove(&INODE_WILDCARD);
                     }
                 }
             };
