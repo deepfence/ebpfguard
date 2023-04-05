@@ -19,8 +19,49 @@ mod vmlinux;
 
 use vmlinux::{sock, task_struct};
 
+const INODE_WILDCARD: u64 = 0;
+
+#[map]
+static ALLOWED_SETUID: HashMap<u64, u8> = HashMap::with_max_entries(1024, 0);
+
 #[map]
 static ALLOWED_PORTS: HashMap<u64, u16> = HashMap::with_max_entries(1024, 0);
+
+#[inline(always)]
+fn current_binprm_inode() -> u64 {
+    let task = unsafe { bpf_get_current_task_btf() as *mut task_struct };
+    unsafe { (*(*(*(*task).mm).__bindgen_anon_1.exe_file).f_inode).i_ino }
+}
+
+#[lsm(name = "task_fix_setuid")]
+pub fn task_fix_setuid(ctx: LsmContext) -> i32 {
+    match try_task_fix_setuid(ctx) {
+        Ok(ret) => ret,
+        Err(_) => 0,
+    }
+}
+
+fn try_task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
+    if unsafe { ALLOWED_SETUID.get(&INODE_WILDCARD) }.is_some() {
+        return Ok(0);
+    }
+
+    let inode = current_binprm_inode();
+
+    let comm = ctx.command()?;
+    let comm = unsafe { core::str::from_utf8_unchecked(&comm) };
+
+    debug!(
+        &ctx,
+        "lsm hook task_fix_setuid called: inode: {}, comm: {}", inode, comm
+    );
+
+    if unsafe { ALLOWED_SETUID.get(&inode) }.is_some() {
+        return Ok(0);
+    }
+
+    Ok(1)
+}
 
 #[lsm(name = "socket_recvmsg")]
 pub fn socket_recvmsg(ctx: LsmContext) -> i32 {

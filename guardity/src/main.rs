@@ -26,6 +26,9 @@ async fn main() -> Result<(), anyhow::Error> {
         warn!("failed to initialize eBPF logger: {}", e);
     }
     let btf = Btf::from_sys_fs()?;
+    let program: &mut Lsm = bpf.program_mut("task_fix_setuid").unwrap().try_into()?;
+    program.load("task_fix_setuid", &btf)?;
+    program.attach()?;
     let program: &mut Lsm = bpf.program_mut("socket_recvmsg").unwrap().try_into()?;
     program.load("socket_recvmsg", &btf)?;
     program.attach()?;
