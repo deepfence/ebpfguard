@@ -1,0 +1,12 @@
+[package]
+name = "guardctl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+aya = "0.11"
+clap = { version = "4.1", features = ["derive"] }
+cli-table = "0.4"
+guardity = { path = "../guardity" }
+guardity-common = { path = "../guardity-common", features = ["user"] }

@@ -1,7 +1,8 @@
+use std::fs::create_dir_all;
 use std::path::PathBuf;
 
 use aya::maps::HashMap;
-use aya::{include_bytes_aligned, Bpf};
+use aya::{include_bytes_aligned, Bpf, BpfLoader};
 use aya::{programs::Lsm, Btf};
 use aya_log::BpfLogger;
 use clap::Parser;
@@ -12,6 +13,10 @@ use guardity::policy::{engine, reader};
 
 #[derive(Debug, Parser)]
 struct Opt {
+    #[clap(long, default_value = "/sys/fs/bpf")]
+    bpffs_path: PathBuf,
+    #[clap(long, default_value = "guardity")]
+    bpffs_dir: PathBuf,
     #[clap(long)]
     policy: Vec<PathBuf>,
 }
@@ -26,14 +31,20 @@ async fn main() -> Result<(), anyhow::Error> {
     // runtime. This approach is recommended for most real-world use cases. If you would
     // like to specify the eBPF program at runtime rather than at compile-time, you can
     // reach for `Bpf::load_file` instead.
+    let bpf_path = opt.bpffs_path.join(opt.bpffs_dir);
+    create_dir_all(&bpf_path)?;
     #[cfg(debug_assertions)]
-    let mut bpf = Bpf::load(include_bytes_aligned!(
-        "../../target/bpfel-unknown-none/debug/guardity"
-    ))?;
+    let mut bpf = BpfLoader::new()
+        .map_pin_path(&bpf_path)
+        .load(include_bytes_aligned!(
+            "../../target/bpfel-unknown-none/debug/guardity"
+        ))?;
     #[cfg(not(debug_assertions))]
-    let mut bpf = Bpf::load(include_bytes_aligned!(
-        "../../target/bpfel-unknown-none/release/guardity"
-    ))?;
+    let mut bpf = BpfLoader::new()
+        .map_pin_path(&bpf_path)
+        .load(include_bytes_aligned!(
+            "../../target/bpfel-unknown-none/release/guardity"
+        ))?;
     if let Err(e) = BpfLogger::init(&mut bpf) {
         // This can happen if you remove all log statements from your eBPF program.
         warn!("failed to initialize eBPF logger: {}", e);

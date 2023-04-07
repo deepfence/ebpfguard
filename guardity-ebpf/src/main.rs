@@ -22,10 +22,10 @@ use vmlinux::{sock, task_struct};
 const INODE_WILDCARD: u64 = 0;
 
 #[map]
-static ALLOWED_SETUID: HashMap<u64, u8> = HashMap::with_max_entries(1024, 0);
+static ALLOWED_SETUID: HashMap<u64, u8> = HashMap::pinned(1024, 0);
 
 #[map]
-static ALLOWED_PORTS: HashMap<u64, u16> = HashMap::with_max_entries(1024, 0);
+static ALLOWED_PORTS: HashMap<u64, u16> = HashMap::pinned(1024, 0);
 
 #[inline(always)]
 fn current_binprm_inode() -> u64 {
