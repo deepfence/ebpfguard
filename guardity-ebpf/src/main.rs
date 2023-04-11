@@ -9,7 +9,7 @@ use aya_bpf::{
     programs::LsmContext,
     BpfContext,
 };
-use aya_log_ebpf::debug;
+use aya_log_ebpf::{debug, info};
 
 #[allow(non_upper_case_globals)]
 #[allow(non_snake_case)]
@@ -23,6 +23,9 @@ const INODE_WILDCARD: u64 = 0;
 
 #[map]
 static ALLOWED_SETUID: HashMap<u64, u8> = HashMap::pinned(1024, 0);
+
+#[map]
+static DENIED_SETUID: HashMap<u64, u8> = HashMap::pinned(1024, 0);
 
 #[map]
 static ALLOWED_PORTS: HashMap<u64, u16> = HashMap::pinned(1024, 0);
@@ -42,10 +45,6 @@ pub fn task_fix_setuid(ctx: LsmContext) -> i32 {
 }
 
 fn try_task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
-    if unsafe { ALLOWED_SETUID.get(&INODE_WILDCARD) }.is_some() {
-        return Ok(0);
-    }
-
     let inode = current_binprm_inode();
 
     let comm = ctx.command()?;
@@ -56,11 +55,21 @@ fn try_task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
         "lsm hook task_fix_setuid called: inode: {}, comm: {}", inode, comm
     );
 
-    if unsafe { ALLOWED_SETUID.get(&inode) }.is_some() {
+    if unsafe { ALLOWED_SETUID.get(&INODE_WILDCARD) }.is_some() {
+        if unsafe { DENIED_SETUID.get(&inode).is_some() } {
+            return Ok(-1);
+        }
         return Ok(0);
     }
 
-    Ok(1)
+    if unsafe { DENIED_SETUID.get(&INODE_WILDCARD) }.is_some() {
+        if unsafe { ALLOWED_SETUID.get(&inode).is_some() } {
+            return Ok(0);
+        }
+        return Ok(-1);
+    }
+
+    Ok(0)
 }
 
 #[lsm(name = "socket_recvmsg")]

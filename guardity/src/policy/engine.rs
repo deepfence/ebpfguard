@@ -10,15 +10,17 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
     info!("Processing policy: {:?}", policy);
     match policy {
         Policy::SetUid { subject, allow } => {
-            let mut allowed_setuid: HashMap<_, u64, u8> =
-                bpf.map_mut("ALLOWED_SETUID").unwrap().try_into()?;
             match subject {
                 PolicySubject::Process(path) => {
                     let inode = fs::inode(path)?;
                     if allow {
+                        let mut allowed_setuid: HashMap<_, u64, u8> =
+                            bpf.map_mut("ALLOWED_SETUID").unwrap().try_into()?;
                         allowed_setuid.insert(&inode, &0, 0)?;
                     } else {
-                        let _ = allowed_setuid.remove(&inode);
+                        let mut denied_setuid: HashMap<_, u64, u8> =
+                            bpf.map_mut("DENIED_SETUID").unwrap().try_into()?;
+                        denied_setuid.insert(&inode, &0, 0)?;
                     }
                 }
                 PolicySubject::Container(_) => {
@@ -26,9 +28,13 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                 }
                 PolicySubject::All => {
                     if allow {
+                        let mut allowed_setuid: HashMap<_, u64, u8> =
+                            bpf.map_mut("ALLOWED_SETUID").unwrap().try_into()?;
                         allowed_setuid.insert(&INODE_WILDCARD, &0, 0)?;
                     } else {
-                        let _ = allowed_setuid.remove(&INODE_WILDCARD);
+                        let mut denied_setuid: HashMap<_, u64, u8> =
+                            bpf.map_mut("DENIED_SETUID").unwrap().try_into()?;
+                        denied_setuid.insert(&INODE_WILDCARD, &0, 0)?;
                     }
                 }
             };
