@@ -1,0 +1,57 @@
+name: build-test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    name: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt, clippy, miri, rust-src
+
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Install bpf-linker
+        run: |
+          cargo install bpf-linker
+
+      - name: Build eBPF code
+        run: |
+          cargo xtask build-ebpf
+
+      - name: Build user space code
+        run: |
+          cargo build
+
+      - name: Run tests
+        run: |
+          cargo test
+
+      - name: Check formatting
+        run: |
+          cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: |
+          cargo clippy --workspace -- --deny warnings
+
+      - name: Run miri
+        run: |
+          cargo +nightly miri test --all-targets
