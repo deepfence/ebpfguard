@@ -16,11 +16,11 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                     if allow {
                         let mut allowed_setuid: HashMap<_, u64, u8> =
                             bpf.map_mut("ALLOWED_SETUID").unwrap().try_into()?;
-                        allowed_setuid.insert(&inode, &0, 0)?;
+                        allowed_setuid.insert(inode, 0, 0)?;
                     } else {
                         let mut denied_setuid: HashMap<_, u64, u8> =
                             bpf.map_mut("DENIED_SETUID").unwrap().try_into()?;
-                        denied_setuid.insert(&inode, &0, 0)?;
+                        denied_setuid.insert(inode, 0, 0)?;
                     }
                 }
                 PolicySubject::Container(_) => {
@@ -30,11 +30,11 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                     if allow {
                         let mut allowed_setuid: HashMap<_, u64, u8> =
                             bpf.map_mut("ALLOWED_SETUID").unwrap().try_into()?;
-                        allowed_setuid.insert(&INODE_WILDCARD, &0, 0)?;
+                        allowed_setuid.insert(INODE_WILDCARD, 0, 0)?;
                     } else {
                         let mut denied_setuid: HashMap<_, u64, u8> =
                             bpf.map_mut("DENIED_SETUID").unwrap().try_into()?;
-                        denied_setuid.insert(&INODE_WILDCARD, &0, 0)?;
+                        denied_setuid.insert(INODE_WILDCARD, 0, 0)?;
                     }
                 }
             };

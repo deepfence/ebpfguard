@@ -1,8 +1,7 @@
 use std::fs::create_dir_all;
 use std::path::PathBuf;
 
-use aya::maps::HashMap;
-use aya::{include_bytes_aligned, Bpf, BpfLoader};
+use aya::{include_bytes_aligned, BpfLoader};
 use aya::{programs::Lsm, Btf};
 use aya_log::BpfLogger;
 use clap::Parser;
@@ -56,9 +55,6 @@ async fn main() -> Result<(), anyhow::Error> {
     let program: &mut Lsm = bpf.program_mut("socket_recvmsg").unwrap().try_into()?;
     program.load("socket_recvmsg", &btf)?;
     program.attach()?;
-
-    let mut allowed_ports: HashMap<_, u64, u16> =
-        bpf.map_mut("ALLOWED_PORTS").unwrap().try_into()?;
 
     for p in opt.policy {
         let policies = reader::read_policies(p)?;
