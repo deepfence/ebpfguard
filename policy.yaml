@@ -4,3 +4,8 @@
 - !setuid
   subject: !process /usr/bin/sudo
   allow: true
+- !file_open
+  subject: all
+  allow: all
+  deny: !paths
+    - /home/vadorovsky/forbidden

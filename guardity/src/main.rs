@@ -49,12 +49,12 @@ async fn main() -> Result<(), anyhow::Error> {
         warn!("failed to initialize eBPF logger: {}", e);
     }
     let btf = Btf::from_sys_fs()?;
-    let program: &mut Lsm = bpf.program_mut("task_fix_setuid").unwrap().try_into()?;
-    program.load("task_fix_setuid", &btf)?;
-    program.attach()?;
-    let program: &mut Lsm = bpf.program_mut("socket_recvmsg").unwrap().try_into()?;
-    program.load("socket_recvmsg", &btf)?;
-    program.attach()?;
+    let programs = vec!["file_open", "task_fix_setuid", "socket_recvmsg"];
+    for name in programs {
+        let program: &mut Lsm = bpf.program_mut(name).unwrap().try_into()?;
+        program.load(name, &btf)?;
+        program.attach()?;
+    }
 
     for p in opt.policy {
         let policies = reader::read_policies(p)?;

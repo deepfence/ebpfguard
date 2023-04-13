@@ -1,11 +1,15 @@
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
 
-use aya::{include_bytes_aligned, maps::HashMap, Bpf, BpfLoader};
+use aya::{
+    include_bytes_aligned,
+    maps::{HashMap, MapError},
+    Bpf, BpfLoader,
+};
 use clap::{Parser, Subcommand};
-use cli_table::{print_stdout, Cell, Style, Table};
+use cli_table::{print_stdout, Cell, Style, Table, TableStruct};
 use guardity::policy::{
     engine::{self, INODE_WILDCARD},
-    reader,
+    reader, Paths,
 };
 
 #[derive(Parser)]
@@ -46,7 +50,72 @@ fn add_policies(bpf: &mut Bpf, r#path: PathBuf) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn list_policies(bpf: &mut Bpf) -> anyhow::Result<()> {
+fn list_file_open(bpf: &mut Bpf) -> anyhow::Result<TableStruct> {
+    let mut table = Vec::new();
+
+    let allowed_file_open: HashMap<_, u64, guardity_common::Paths> =
+        bpf.map("ALLOWED_FILE_OPEN").unwrap().try_into()?;
+    let denied_file_open: HashMap<_, u64, guardity_common::Paths> =
+        bpf.map("DENIED_FILE_OPEN").unwrap().try_into()?;
+
+    let mut subjects = HashSet::new();
+    for key in allowed_file_open.keys() {
+        let key = key?;
+        subjects.insert(key);
+    }
+    for key in denied_file_open.keys() {
+        let key = key?;
+        subjects.insert(key);
+    }
+
+    for subject in subjects {
+        let allowed = match allowed_file_open.get(&subject, 0) {
+            Ok(allowed) => {
+                let allowed = allowed.into();
+                match allowed {
+                    Paths::All => "all".to_owned(),
+                    Paths::Paths(paths) => paths
+                        .iter()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                }
+            }
+            Err(MapError::KeyNotFound) => "-".to_owned(),
+            Err(e) => return Err(e.into()),
+        };
+        let denied = match denied_file_open.get(&subject, 0) {
+            Ok(denied) => {
+                let denied = denied.into();
+                match denied {
+                    Paths::All => "all".to_owned(),
+                    Paths::Paths(paths) => paths
+                        .iter()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                }
+            }
+            Err(MapError::KeyNotFound) => "-".to_owned(),
+            Err(e) => return Err(e.into()),
+        };
+        if subject == INODE_WILDCARD {
+            table.push(vec!["all".to_string(), allowed, denied]);
+        } else {
+            table.push(vec![subject.to_string(), allowed, denied]);
+        }
+    }
+
+    let table = table.table().title(vec![
+        "subject".to_string(),
+        "allowed paths".to_string(),
+        "denied paths".to_string(),
+    ]);
+
+    Ok(table)
+}
+
+fn list_setuid(bpf: &mut Bpf) -> anyhow::Result<TableStruct> {
     let mut table = Vec::new();
 
     let allowed_setuid: HashMap<_, u64, u8> = bpf.map("ALLOWED_SETUID").unwrap().try_into()?;
@@ -73,6 +142,22 @@ fn list_policies(bpf: &mut Bpf) -> anyhow::Result<()> {
         "action".cell().bold(true),
         "subject".cell().bold(true),
     ]);
+
+    Ok(table)
+}
+
+fn list_policies(bpf: &mut Bpf) -> anyhow::Result<()> {
+    let file_open = list_file_open(bpf)?;
+    let setuid = list_setuid(bpf)?;
+
+    let table = vec![
+        vec!["file_open".cell()],
+        vec![file_open.display()?.cell()],
+        vec!["setuid".cell()],
+        vec![setuid.display()?.cell()],
+    ]
+    .table()
+    .title(vec!["Policy".cell().bold(true)]);
 
     print_stdout(table)?;
 

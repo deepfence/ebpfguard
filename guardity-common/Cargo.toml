@@ -5,9 +5,10 @@ edition = "2021"
 
 [features]
 default = []
-user = ["aya"]
+user = ["anyhow", "aya"]
 
 [dependencies]
+anyhow = { version = "1.0", optional = true }
 aya = { version = ">=0.11", optional = true }
 
 [lib]

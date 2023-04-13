@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::fs;
+
 pub mod engine;
 pub mod reader;
 
@@ -16,7 +18,69 @@ pub enum PolicySubject {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Paths {
+    #[serde(rename = "all")]
+    All,
+    #[serde(rename = "paths")]
+    Paths(Vec<PathBuf>),
+}
+
+// NOTE(vadorovsky): Converting from `guardity_common::Paths` to `Paths`
+// requires resolving inodes to paths. Inode/path resolution is not a
+// symmetrical operation (path -> inode resolution is a simple file metadata
+// lookup, while inode -> path resolution requires more complex per-filesystem
+// operations). Therefore, `Into` and `From` traits have to be implemented
+// separately.
+#[allow(clippy::from_over_into)]
+impl Into<guardity_common::Paths> for Paths {
+    fn into(self) -> guardity_common::Paths {
+        match self {
+            Paths::All => guardity_common::Paths {
+                paths: [0; guardity_common::MAX_PATHS],
+                len: 0,
+                all: true,
+                _padding: [0; 7],
+            },
+            Paths::Paths(paths) => {
+                let mut ebpf_paths = [0; guardity_common::MAX_PATHS];
+                for (i, path) in paths.iter().enumerate() {
+                    ebpf_paths[i] = fs::inode(path).unwrap();
+                }
+                guardity_common::Paths {
+                    paths: ebpf_paths,
+                    len: paths.len(),
+                    all: false,
+                    _padding: [0; 7],
+                }
+            }
+        }
+    }
+}
+
+impl From<guardity_common::Paths> for Paths {
+    fn from(paths: guardity_common::Paths) -> Self {
+        if paths.all {
+            Paths::All
+        } else {
+            Paths::Paths(
+                paths.paths[..paths.len]
+                    .iter()
+                    // TODO(vadorovsky): Resolve inodes to paths properly.
+                    .map(|p| PathBuf::from(p.to_string()))
+                    .collect::<Vec<_>>(),
+            )
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Policy {
+    #[serde(rename = "file_open")]
+    FileOpen {
+        subject: PolicySubject,
+        allow: Paths,
+        deny: Paths,
+    },
     #[serde(rename = "setuid")]
     SetUid { subject: PolicySubject, allow: bool },
 }
@@ -26,7 +90,54 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_policy() {
+    fn test_file_open() {
+        let yaml = "
+- !file_open
+  subject: all
+  allow: all
+  deny: !paths
+    - /root/s3cr3tdir
+- !file_open
+  subject: !process /usr/bin/myapp
+  allow: !paths
+    - /etc/myapp
+  deny: all
+- !file_open
+  subject: !container docker.io/myapp
+  allow: !paths
+    - /etc/myapp
+  deny: all
+";
+        let policy = serde_yaml::from_str::<Vec<Policy>>(yaml).unwrap();
+        assert_eq!(policy.len(), 3);
+        assert_eq!(
+            policy[0],
+            Policy::FileOpen {
+                subject: PolicySubject::All,
+                allow: Paths::All,
+                deny: Paths::Paths(vec![PathBuf::from("/root/s3cr3tdir")])
+            }
+        );
+        assert_eq!(
+            policy[1],
+            Policy::FileOpen {
+                subject: PolicySubject::Process(PathBuf::from("/usr/bin/myapp")),
+                allow: Paths::Paths(vec![PathBuf::from("/etc/myapp")]),
+                deny: Paths::All
+            }
+        );
+        assert_eq!(
+            policy[2],
+            Policy::FileOpen {
+                subject: PolicySubject::Container("docker.io/myapp".to_string()),
+                allow: Paths::Paths(vec![PathBuf::from("/etc/myapp")]),
+                deny: Paths::All
+            }
+        );
+    }
+
+    #[test]
+    fn test_setuid() {
         let yaml = "
 - !setuid
   subject: all  
