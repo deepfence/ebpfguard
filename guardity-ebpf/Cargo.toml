@@ -14,7 +14,6 @@ path = "src/main.rs"
 
 [profile.dev]
 opt-level = 3
-debug = false
 debug-assertions = false
 overflow-checks = false
 lto = true

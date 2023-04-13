@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+use core::cmp;
+
 use aya_bpf::{
     cty::c_long,
     helpers::bpf_get_current_task_btf,
@@ -17,9 +19,18 @@ use aya_log_ebpf::{debug, info};
 #[allow(dead_code)]
 mod vmlinux;
 
-use vmlinux::{sock, task_struct};
+use guardity_common::{Paths, MAX_PATHS};
+use vmlinux::{file, sock, task_struct};
 
 const INODE_WILDCARD: u64 = 0;
+// const MAX_DIR_DEPTH: usize = 256;
+const MAX_DIR_DEPTH: usize = 16;
+
+#[map]
+static ALLOWED_FILE_OPEN: HashMap<u64, Paths> = HashMap::pinned(1024, 0);
+
+#[map]
+static DENIED_FILE_OPEN: HashMap<u64, Paths> = HashMap::pinned(1024, 0);
 
 #[map]
 static ALLOWED_SETUID: HashMap<u64, u8> = HashMap::pinned(1024, 0);
@@ -36,6 +47,156 @@ fn current_binprm_inode() -> u64 {
     unsafe { (*(*(*(*task).mm).__bindgen_anon_1.exe_file).f_inode).i_ino }
 }
 
+#[lsm(name = "file_open")]
+pub fn file_open(ctx: LsmContext) -> i32 {
+    match try_file_open(ctx) {
+        Ok(ret) => ret,
+        Err(_) => 0,
+    }
+}
+
+fn try_file_open(ctx: LsmContext) -> Result<i32, c_long> {
+    let file: *const file = unsafe { ctx.arg(0) };
+
+    let binprm_inode = current_binprm_inode();
+    let inode = unsafe { (*(*(*file).f_path.dentry).d_inode).i_ino };
+
+    if let Some(paths) = unsafe { ALLOWED_FILE_OPEN.get(&INODE_WILDCARD) } {
+        if paths.all {
+            if let Some(paths) = unsafe { DENIED_FILE_OPEN.get(&INODE_WILDCARD) } {
+                if paths.all {
+                    return Ok(-1);
+                }
+
+                for i in 0..cmp::min(paths.len, MAX_PATHS) {
+                    if paths.paths[i] == inode {
+                        return Ok(-1);
+                    }
+                }
+
+                let mut previous_inode = inode;
+                let mut parent_dentry = unsafe { (*(*file).f_path.dentry).d_parent };
+                for _ in 0..MAX_DIR_DEPTH {
+                    if parent_dentry.is_null() {
+                        break;
+                    }
+                    let inode = unsafe { (*(*parent_dentry).d_inode).i_ino };
+                    if inode == previous_inode {
+                        break;
+                    }
+                    for i in 0..cmp::min(paths.len, MAX_PATHS) {
+                        if paths.paths[i] == inode {
+                            return Ok(-1);
+                        }
+                    }
+                    previous_inode = inode;
+                    parent_dentry = unsafe { (*parent_dentry).d_parent };
+                }
+            }
+
+            if let Some(paths) = unsafe { DENIED_FILE_OPEN.get(&binprm_inode) } {
+                if paths.all {
+                    return Ok(-1);
+                }
+
+                for i in 0..cmp::min(paths.len, MAX_PATHS) {
+                    if paths.paths[i] == inode {
+                        return Ok(-1);
+                    }
+                }
+
+                let mut previous_inode = inode;
+                let mut parent_dentry = unsafe { (*(*file).f_path.dentry).d_parent };
+                for _ in 0..MAX_DIR_DEPTH {
+                    if parent_dentry.is_null() {
+                        break;
+                    }
+                    let inode = unsafe { (*(*parent_dentry).d_inode).i_ino };
+                    if inode == previous_inode {
+                        break;
+                    }
+                    for i in 0..cmp::min(paths.len, MAX_PATHS) {
+                        if paths.paths[i] == inode {
+                            return Ok(-1);
+                        }
+                    }
+                    previous_inode = inode;
+                    parent_dentry = unsafe { (*parent_dentry).d_parent };
+                }
+            }
+        }
+    }
+
+    if let Some(paths) = unsafe { DENIED_FILE_OPEN.get(&INODE_WILDCARD) } {
+        if paths.all {
+            if let Some(paths) = unsafe { ALLOWED_FILE_OPEN.get(&INODE_WILDCARD) } {
+                if paths.all {
+                    return Ok(0);
+                }
+
+                for i in 0..cmp::min(paths.len, MAX_PATHS) {
+                    if paths.paths[i] == inode {
+                        return Ok(0);
+                    }
+                }
+
+                let mut previous_inode = inode;
+                let mut parent_dentry = unsafe { (*(*file).f_path.dentry).d_parent };
+                for _ in 0..MAX_DIR_DEPTH {
+                    if parent_dentry.is_null() {
+                        break;
+                    }
+                    let inode = unsafe { (*(*parent_dentry).d_inode).i_ino };
+                    if inode == previous_inode {
+                        break;
+                    }
+                    for i in 0..cmp::min(paths.len, MAX_PATHS) {
+                        if paths.paths[i] == inode {
+                            return Ok(0);
+                        }
+                    }
+                    previous_inode = inode;
+                    parent_dentry = unsafe { (*parent_dentry).d_parent };
+                }
+            }
+
+            if let Some(paths) = unsafe { ALLOWED_FILE_OPEN.get(&binprm_inode) } {
+                if paths.all {
+                    return Ok(0);
+                }
+
+                for i in 0..cmp::min(paths.len, MAX_PATHS) {
+                    if paths.paths[i] == inode {
+                        return Ok(0);
+                    }
+                }
+
+                let mut previous_inode = inode;
+                let mut parent_dentry = unsafe { (*(*file).f_path.dentry).d_parent };
+                for _ in 0..MAX_DIR_DEPTH {
+                    if parent_dentry.is_null() {
+                        break;
+                    }
+                    let inode = unsafe { (*(*parent_dentry).d_inode).i_ino };
+                    if inode == previous_inode {
+                        break;
+                    }
+                    for i in 0..cmp::min(paths.len, MAX_PATHS) {
+                        if paths.paths[i] == inode {
+                            return Ok(0);
+                        }
+                    }
+                    previous_inode = inode;
+                    parent_dentry = unsafe { (*parent_dentry).d_parent };
+                }
+            }
+            return Ok(-1);
+        }
+    }
+
+    Ok(0)
+}
+
 #[lsm(name = "task_fix_setuid")]
 pub fn task_fix_setuid(ctx: LsmContext) -> i32 {
     match try_task_fix_setuid(ctx) {
@@ -50,7 +211,7 @@ fn try_task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
     let comm = ctx.command()?;
     let comm = unsafe { core::str::from_utf8_unchecked(&comm) };
 
-    debug!(
+    info!(
         &ctx,
         "lsm hook task_fix_setuid called: inode: {}, comm: {}", inode, comm
     );
