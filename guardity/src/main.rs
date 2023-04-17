@@ -1,11 +1,16 @@
 use std::fs::create_dir_all;
 use std::path::PathBuf;
 
+use aya::maps::{AsyncPerfEventArray, MapData};
+use aya::util::online_cpus;
 use aya::{include_bytes_aligned, BpfLoader};
 use aya::{programs::Lsm, Btf};
 use aya_log::BpfLogger;
+use bytes::BytesMut;
 use clap::Parser;
+use guardity_common::{FileOpenAlert, SetuidAlert};
 use log::{info, warn};
+use serde::Serialize;
 use tokio::signal;
 
 use guardity::policy::{engine, reader};
@@ -18,6 +23,31 @@ struct Opt {
     bpffs_dir: PathBuf,
     #[clap(long)]
     policy: Vec<PathBuf>,
+}
+
+async fn read_alerts<T>(mut map: AsyncPerfEventArray<MapData>)
+where
+    T: Serialize + Send + Sync + 'static,
+{
+    let cpus = online_cpus().unwrap();
+    for cpu_id in cpus {
+        let mut buf = map.open(cpu_id, None).unwrap();
+
+        tokio::spawn(async move {
+            let mut buffers = (0..10)
+                .map(|_| BytesMut::with_capacity(1024))
+                .collect::<Vec<_>>();
+
+            loop {
+                let events = buf.read_events(&mut buffers).await.unwrap();
+                for buf in buffers.iter_mut().take(events.read) {
+                    let ptr = buf.as_ptr() as *const T;
+                    let data = unsafe { ptr.read_unaligned() };
+                    eprintln!("{}", serde_json::to_string(&data).unwrap());
+                }
+            }
+        });
+    }
 }
 
 #[tokio::main]
@@ -62,6 +92,9 @@ async fn main() -> Result<(), anyhow::Error> {
             engine::process_policy(&mut bpf, policy)?;
         }
     }
+
+    read_alerts::<FileOpenAlert>(bpf.take_map("ALERT_FILE_OPEN").unwrap().try_into()?).await;
+    read_alerts::<SetuidAlert>(bpf.take_map("ALERT_SETUID").unwrap().try_into()?).await;
 
     info!("Waiting for Ctrl-C...");
     signal::ctrl_c().await?;
