@@ -9,3 +9,8 @@
   allow: all
   deny: !paths
     - /home/vadorovsky/forbidden
+- !file_open
+  subject: !process /usr/bin/cat
+  allow: all
+  deny: !paths
+    - /home/vadorovsky/foo

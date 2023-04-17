@@ -2,6 +2,7 @@ use std::fs::create_dir_all;
 use std::path::PathBuf;
 
 use aya::maps::{AsyncPerfEventArray, MapData};
+use aya::programs::{tc, SchedClassifier, TcAttachType};
 use aya::util::online_cpus;
 use aya::{include_bytes_aligned, BpfLoader};
 use aya::{programs::Lsm, Btf};
@@ -21,6 +22,8 @@ struct Opt {
     bpffs_path: PathBuf,
     #[clap(long, default_value = "guardity")]
     bpffs_dir: PathBuf,
+    #[clap(short, long, default_value = "eth0")]
+    iface: String,
     #[clap(long)]
     policy: Vec<PathBuf>,
 }
@@ -79,12 +82,23 @@ async fn main() -> Result<(), anyhow::Error> {
         warn!("failed to initialize eBPF logger: {}", e);
     }
     let btf = Btf::from_sys_fs()?;
-    let programs = vec!["file_open", "task_fix_setuid", "socket_recvmsg"];
+    let programs = vec!["file_open", "task_fix_setuid"];
     for name in programs {
         let program: &mut Lsm = bpf.program_mut(name).unwrap().try_into()?;
         program.load(name, &btf)?;
         program.attach()?;
     }
+    // let program: &mut CgroupSkb = bpf.program_mut("cgroup_skb").unwrap().try_into()?;
+    // program.load()?;
+    // program.attach(File::open("/sys/fs/cgroup")?, CgroupSkbAttachType::Ingress)?;
+    let _ = tc::qdisc_add_clsact(&opt.iface);
+    let program: &mut SchedClassifier = bpf.program_mut("classifier_egress").unwrap().try_into()?;
+    program.load()?;
+    program.attach(&opt.iface, TcAttachType::Egress)?;
+    let program: &mut SchedClassifier =
+        bpf.program_mut("classifier_ingress").unwrap().try_into()?;
+    program.load()?;
+    program.attach(&opt.iface, TcAttachType::Ingress)?;
 
     for p in opt.policy {
         let policies = reader::read_policies(p)?;
