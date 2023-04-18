@@ -74,6 +74,50 @@ impl From<guardity_common::Paths> for Paths {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Ports {
+    #[serde(rename = "all")]
+    All,
+    #[serde(rename = "ports")]
+    Ports(Vec<u16>),
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<guardity_common::Ports> for Ports {
+    fn into(self) -> guardity_common::Ports {
+        match self {
+            Ports::All => guardity_common::Ports {
+                ports: [0; guardity_common::MAX_PORTS],
+                len: 0,
+                all: true,
+                _padding: [0; 7],
+            },
+            Ports::Ports(ports) => {
+                let mut ebpf_ports = [0; guardity_common::MAX_PORTS];
+                for (i, port) in ports.iter().enumerate() {
+                    ebpf_ports[i] = *port;
+                }
+                guardity_common::Ports {
+                    ports: ebpf_ports,
+                    len: ports.len(),
+                    all: false,
+                    _padding: [0; 7],
+                }
+            }
+        }
+    }
+}
+
+impl From<guardity_common::Ports> for Ports {
+    fn from(ports: guardity_common::Ports) -> Self {
+        if ports.all {
+            Ports::All
+        } else {
+            Ports::Ports(ports.ports[..ports.len].to_vec())
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Policy {
     #[serde(rename = "file_open")]
     FileOpen {
@@ -83,6 +127,12 @@ pub enum Policy {
     },
     #[serde(rename = "setuid")]
     SetUid { subject: PolicySubject, allow: bool },
+    #[serde(rename = "socket_bind")]
+    SocketBind {
+        subject: PolicySubject,
+        allow: Ports,
+        deny: Ports,
+    },
 }
 
 #[cfg(test)]
@@ -172,5 +222,54 @@ mod test {
                 allow: true
             }
         );
+    }
+
+    #[test]
+    fn test_socket_bind() {
+        let yaml = "
+- !socket_bind
+  subject: !process /usr/bin/nginx
+  allow: !ports
+    - 80
+    - 443
+  deny: all
+- !socket_bind
+  subject: !process /usr/bin/python
+  allow: !ports
+    - 8080
+  deny: all
+- !socket_bind
+  subject: !container docker.io/nginx
+  allow: !ports
+    - 80
+    - 443
+  deny: all
+";
+        let policy = serde_yaml::from_str::<Vec<Policy>>(yaml).unwrap();
+        assert_eq!(policy.len(), 3);
+        assert_eq!(
+            policy[0],
+            Policy::SocketBind {
+                subject: PolicySubject::Process(PathBuf::from("/usr/bin/nginx")),
+                allow: Ports::Ports(vec![80, 443]),
+                deny: Ports::All
+            }
+        );
+        assert_eq!(
+            policy[1],
+            Policy::SocketBind {
+                subject: PolicySubject::Process(PathBuf::from("/usr/bin/python")),
+                allow: Ports::Ports(vec![8080]),
+                deny: Ports::All
+            }
+        );
+        assert_eq!(
+            policy[2],
+            Policy::SocketBind {
+                subject: PolicySubject::Container("docker.io/nginx".to_string()),
+                allow: Ports::Ports(vec![80, 443]),
+                deny: Ports::All
+            }
+        )
     }
 }

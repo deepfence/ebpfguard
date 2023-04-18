@@ -8,7 +8,7 @@ use aya::{programs::Lsm, Btf};
 use aya_log::BpfLogger;
 use bytes::BytesMut;
 use clap::Parser;
-use guardity_common::{FileOpenAlert, SetuidAlert};
+use guardity_common::{FileOpenAlert, SetuidAlert, SocketBindAlert};
 use log::{info, warn};
 use serde::Serialize;
 use tokio::signal;
@@ -79,7 +79,12 @@ async fn main() -> Result<(), anyhow::Error> {
         warn!("failed to initialize eBPF logger: {}", e);
     }
     let btf = Btf::from_sys_fs()?;
-    let programs = vec!["file_open", "task_fix_setuid", "socket_recvmsg"];
+    let programs = vec![
+        "file_open",
+        "task_fix_setuid",
+        "socket_bind",
+        "socket_connect",
+    ];
     for name in programs {
         let program: &mut Lsm = bpf.program_mut(name).unwrap().try_into()?;
         program.load(name, &btf)?;
@@ -95,6 +100,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     read_alerts::<FileOpenAlert>(bpf.take_map("ALERT_FILE_OPEN").unwrap().try_into()?).await;
     read_alerts::<SetuidAlert>(bpf.take_map("ALERT_SETUID").unwrap().try_into()?).await;
+    read_alerts::<SocketBindAlert>(bpf.take_map("ALERT_SOCKET_BIND").unwrap().try_into()?).await;
 
     info!("Waiting for Ctrl-C...");
     signal::ctrl_c().await?;

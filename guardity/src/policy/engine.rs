@@ -1,5 +1,5 @@
 use aya::{maps::HashMap, Bpf};
-use guardity_common::Paths;
+use guardity_common::{Paths, Ports};
 use log::info;
 
 use super::{Policy, PolicySubject};
@@ -72,6 +72,38 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                     }
                 }
             };
+        }
+        Policy::SocketBind {
+            subject,
+            allow,
+            deny,
+        } => {
+            let allow: Ports = allow.into();
+            let deny: Ports = deny.into();
+            match subject {
+                PolicySubject::Process(path) => {
+                    let inode = fs::inode(path)?;
+                    let mut allowed_socket_bind: HashMap<_, u64, Ports> =
+                        bpf.map_mut("ALLOWED_SOCKET_BIND").unwrap().try_into()?;
+                    allowed_socket_bind.insert(inode, allow, 0)?;
+
+                    let mut denied_socket_bind: HashMap<_, u64, Ports> =
+                        bpf.map_mut("DENIED_SOCKET_BIND").unwrap().try_into()?;
+                    denied_socket_bind.insert(inode, deny, 0)?;
+                }
+                PolicySubject::Container(_) => {
+                    unimplemented!();
+                }
+                PolicySubject::All => {
+                    let mut allowed_socket_bind: HashMap<_, u64, Ports> =
+                        bpf.map_mut("ALLOWED_SOCKET_BIND").unwrap().try_into()?;
+                    allowed_socket_bind.insert(INODE_WILDCARD, allow, 0)?;
+
+                    let mut denied_socket_bind: HashMap<_, u64, Ports> =
+                        bpf.map_mut("DENIED_SOCKET_BIND").unwrap().try_into()?;
+                    denied_socket_bind.insert(INODE_WILDCARD, deny, 0)?;
+                }
+            }
         }
     }
     Ok(())
