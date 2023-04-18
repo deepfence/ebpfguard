@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 use cli_table::{print_stdout, Cell, Style, Table, TableStruct};
 use guardity::policy::{
     engine::{self, INODE_WILDCARD},
-    reader, Paths,
+    reader, Paths, Ports,
 };
 
 #[derive(Parser)]
@@ -107,9 +107,9 @@ fn list_file_open(bpf: &mut Bpf) -> anyhow::Result<TableStruct> {
     }
 
     let table = table.table().title(vec![
-        "subject".to_string(),
-        "allowed paths".to_string(),
-        "denied paths".to_string(),
+        "subject".cell().bold(true),
+        "allowed paths".cell().bold(true),
+        "denied paths".cell().bold(true),
     ]);
 
     Ok(table)
@@ -146,15 +146,83 @@ fn list_setuid(bpf: &mut Bpf) -> anyhow::Result<TableStruct> {
     Ok(table)
 }
 
+fn list_socket_bind(bpf: &mut Bpf) -> anyhow::Result<TableStruct> {
+    let mut table = Vec::new();
+
+    let allowed_socket_connect: HashMap<_, u64, guardity_common::Ports> =
+        bpf.map("ALLOWED_SOCKET_CONNECT").unwrap().try_into()?;
+    let denied_socket_connect: HashMap<_, u64, guardity_common::Ports> =
+        bpf.map("DENIED_SOCKET_CONNECT").unwrap().try_into()?;
+
+    let mut subjects = HashSet::new();
+    for key in allowed_socket_connect.keys() {
+        let key = key?;
+        subjects.insert(key);
+    }
+    for key in denied_socket_connect.keys() {
+        let key = key?;
+        subjects.insert(key);
+    }
+
+    for subject in subjects {
+        let allowed = match allowed_socket_connect.get(&subject, 0) {
+            Ok(allowed) => {
+                let allowed = allowed.into();
+                match allowed {
+                    Ports::All => "all".to_owned(),
+                    Ports::Ports(ports) => ports
+                        .iter()
+                        .map(|p| p.to_string())
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                }
+            }
+            Err(MapError::KeyNotFound) => "-".to_owned(),
+            Err(e) => return Err(e.into()),
+        };
+        let denied = match denied_socket_connect.get(&subject, 0) {
+            Ok(denied) => {
+                let denied = denied.into();
+                match denied {
+                    Ports::All => "all".to_owned(),
+                    Ports::Ports(ports) => ports
+                        .iter()
+                        .map(|p| p.to_string())
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                }
+            }
+            Err(MapError::KeyNotFound) => "-".to_owned(),
+            Err(e) => return Err(e.into()),
+        };
+        if subject == INODE_WILDCARD {
+            table.push(vec!["all".to_string(), allowed, denied]);
+        } else {
+            table.push(vec![subject.to_string(), allowed, denied]);
+        }
+    }
+
+    let table = table.table().title(vec![
+        "subject".cell().bold(true),
+        "allowed ports".cell().bold(true),
+        "denied ports".cell().bold(true),
+    ]);
+
+    Ok(table)
+}
+
 fn list_policies(bpf: &mut Bpf) -> anyhow::Result<()> {
     let file_open = list_file_open(bpf)?;
     let setuid = list_setuid(bpf)?;
+    let socket_bind = list_socket_bind(bpf)?;
 
     let table = vec![
         vec!["file_open".cell()],
         vec![file_open.display()?.cell()],
         vec!["setuid".cell()],
         vec![setuid.display()?.cell()],
+        vec!["socket_bind".cell()],
+        vec![socket_bind.display()?.cell()],
     ]
     .table()
     .title(vec!["Policy".cell().bold(true)]);

@@ -9,3 +9,8 @@
   allow: all
   deny: !paths
     - /home/vadorovsky/forbidden
+- !socket_bind
+  subject: !process /usr/bin/python
+  allow: !ports
+    - 8080
+  deny: all

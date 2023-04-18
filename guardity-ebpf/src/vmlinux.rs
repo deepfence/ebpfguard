@@ -35181,6 +35181,14 @@ pub struct rate_sample {
     pub is_ack_delayed: bool_,
 }
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct sockaddr_in {
+    pub sin_family: __kernel_sa_family_t,
+    pub sin_port: __be16,
+    pub sin_addr: in_addr,
+    pub __pad: [::aya_bpf::cty::c_uchar; 8usize],
+}
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ip_mc_list {
     pub interface: *mut in_device,
