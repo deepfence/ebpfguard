@@ -85,23 +85,13 @@ pub enum Ports {
 impl Into<guardity_common::Ports> for Ports {
     fn into(self) -> guardity_common::Ports {
         match self {
-            Ports::All => guardity_common::Ports {
-                ports: [0; guardity_common::MAX_PORTS],
-                len: 0,
-                all: true,
-                _padding: [0; 7],
-            },
+            Ports::All => guardity_common::Ports::new(true, 0, [0; guardity_common::MAX_PORTS]),
             Ports::Ports(ports) => {
                 let mut ebpf_ports = [0; guardity_common::MAX_PORTS];
                 for (i, port) in ports.iter().enumerate() {
                     ebpf_ports[i] = *port;
                 }
-                guardity_common::Ports {
-                    ports: ebpf_ports,
-                    len: ports.len(),
-                    all: false,
-                    _padding: [0; 7],
-                }
+                guardity_common::Ports::new(false, ports.len(), ebpf_ports)
             }
         }
     }
