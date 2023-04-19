@@ -67,11 +67,7 @@ fn try_file_open(ctx: LsmContext) -> Result<i32, c_long> {
                 if paths.all {
                     ALERT_FILE_OPEN.output(
                         &ctx,
-                        &FileOpenAlert {
-                            pid: ctx.pid() as u64,
-                            binprm_inode,
-                            inode,
-                        },
+                        &FileOpenAlert::new(ctx.pid(), binprm_inode, inode),
                         0,
                     );
                     return Ok(-1);
@@ -81,11 +77,7 @@ fn try_file_open(ctx: LsmContext) -> Result<i32, c_long> {
                     if paths.paths[i] == inode {
                         ALERT_FILE_OPEN.output(
                             &ctx,
-                            &FileOpenAlert {
-                                pid: ctx.pid() as u64,
-                                binprm_inode,
-                                inode,
-                            },
+                            &FileOpenAlert::new(ctx.pid(), binprm_inode, inode),
                             0,
                         );
                         return Ok(-1);
@@ -106,11 +98,7 @@ fn try_file_open(ctx: LsmContext) -> Result<i32, c_long> {
                         if paths.paths[i] == inode {
                             ALERT_FILE_OPEN.output(
                                 &ctx,
-                                &FileOpenAlert {
-                                    pid: ctx.pid() as u64,
-                                    binprm_inode,
-                                    inode,
-                                },
+                                &FileOpenAlert::new(ctx.pid(), binprm_inode, inode),
                                 0,
                             );
                             return Ok(-1);
@@ -125,11 +113,7 @@ fn try_file_open(ctx: LsmContext) -> Result<i32, c_long> {
                 if paths.all {
                     ALERT_FILE_OPEN.output(
                         &ctx,
-                        &FileOpenAlert {
-                            pid: ctx.pid() as u64,
-                            binprm_inode,
-                            inode,
-                        },
+                        &FileOpenAlert::new(ctx.pid(), binprm_inode, inode),
                         0,
                     );
                     return Ok(-1);
@@ -139,11 +123,7 @@ fn try_file_open(ctx: LsmContext) -> Result<i32, c_long> {
                     if paths.paths[i] == inode {
                         ALERT_FILE_OPEN.output(
                             &ctx,
-                            &FileOpenAlert {
-                                pid: ctx.pid() as u64,
-                                binprm_inode,
-                                inode,
-                            },
+                            &FileOpenAlert::new(ctx.pid(), binprm_inode, inode),
                             0,
                         );
                         return Ok(-1);
@@ -164,11 +144,7 @@ fn try_file_open(ctx: LsmContext) -> Result<i32, c_long> {
                         if paths.paths[i] == inode {
                             ALERT_FILE_OPEN.output(
                                 &ctx,
-                                &FileOpenAlert {
-                                    pid: ctx.pid() as u64,
-                                    binprm_inode,
-                                    inode,
-                                },
+                                &FileOpenAlert::new(ctx.pid(), binprm_inode, inode),
                                 0,
                             );
                             return Ok(-1);
@@ -244,15 +220,7 @@ fn try_file_open(ctx: LsmContext) -> Result<i32, c_long> {
                     parent_dentry = unsafe { (*parent_dentry).d_parent };
                 }
             }
-            ALERT_FILE_OPEN.output(
-                &ctx,
-                &FileOpenAlert {
-                    pid: ctx.pid() as u64,
-                    binprm_inode,
-                    inode,
-                },
-                0,
-            );
+            ALERT_FILE_OPEN.output(&ctx, &FileOpenAlert::new(ctx.pid(), binprm_inode, inode), 0);
             return Ok(-1);
         }
     }
@@ -283,14 +251,7 @@ fn try_task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
         if unsafe { DENIED_SETUID.get(&binprm_inode).is_some() } {
             ALERT_SETUID.output(
                 &ctx,
-                &SetuidAlert {
-                    pid: ctx.pid() as u64,
-                    binprm_inode,
-                    old_uid,
-                    old_gid,
-                    new_uid,
-                    new_gid,
-                },
+                &SetuidAlert::new(ctx.pid(), binprm_inode, old_uid, old_gid, new_uid, new_gid),
                 0,
             );
             return Ok(-1);
@@ -304,14 +265,7 @@ fn try_task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
         }
         ALERT_SETUID.output(
             &ctx,
-            &SetuidAlert {
-                pid: ctx.pid() as u64,
-                binprm_inode,
-                old_uid,
-                old_gid,
-                new_uid,
-                new_gid,
-            },
+            &SetuidAlert::new(ctx.pid(), binprm_inode, old_uid, old_gid, new_uid, new_gid),
             0,
         );
         return Ok(-1);

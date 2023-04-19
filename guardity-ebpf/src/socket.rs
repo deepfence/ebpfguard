@@ -29,11 +29,7 @@ pub(crate) fn try_socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
                 if ports.all {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
-                        &SocketBindAlert{
-                            pid: ctx.pid() as u64,
-                            binprm_inode,
-                            port: port as u64,
-                        },
+                        &SocketBindAlert::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
                     return Ok(-1);
@@ -41,11 +37,7 @@ pub(crate) fn try_socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
                 if ports.ports.contains(&port) {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
-                        &SocketBindAlert{
-                            pid: ctx.pid() as u64,
-                            binprm_inode,
-                            port: port as u64,
-                        },
+                        &SocketBindAlert::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
                     return Ok(-1);
@@ -56,11 +48,7 @@ pub(crate) fn try_socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
                 if ports.all {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
-                        &SocketBindAlert{
-                            pid: ctx.pid() as u64,
-                            binprm_inode,
-                            port: port as u64,
-                        },
+                        &SocketBindAlert::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
                     return Ok(-1);
@@ -68,11 +56,7 @@ pub(crate) fn try_socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
                 if ports.ports.contains(&port) {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
-                        &SocketBindAlert{
-                            pid: ctx.pid() as u64,
-                            binprm_inode,
-                            port: port as u64,
-                        },
+                        &SocketBindAlert::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
                     return Ok(-1);
@@ -107,11 +91,7 @@ pub(crate) fn try_socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
 
             ALERT_SOCKET_BIND.output(
                 &ctx,
-                &SocketBindAlert{
-                    pid: ctx.pid() as u64,
-                    binprm_inode,
-                    port: port as u64,
-                },
+                &SocketBindAlert::new(ctx.pid(), binprm_inode, port),
                 0,
             );
             return Ok(-1);
@@ -119,11 +99,7 @@ pub(crate) fn try_socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
             if ports.ports.contains(&port) {
                 ALERT_SOCKET_BIND.output(
                     &ctx,
-                    &SocketBindAlert{
-                        pid: ctx.pid() as u64,
-                        binprm_inode,
-                        port: port as u64,
-                    },
+                    &SocketBindAlert::new(ctx.pid(), binprm_inode, port),
                     0,
                 );
                 return Ok(-1);

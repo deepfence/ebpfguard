@@ -8,16 +8,29 @@ pub const MAX_IPV4ADDRS: usize = 8;
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
 pub struct FileOpenAlert {
-    pub pid: u64,
+    pub pid: u32,
+    pub _padding: u32,
     pub binprm_inode: u64,
     pub inode: u64,
+}
+
+impl FileOpenAlert {
+    pub fn new(pid: u32, binprm_inode: u64, inode: u64) -> Self {
+        Self {
+            pid,
+            _padding: 0,
+            binprm_inode,
+            inode,
+        }
+    }
 }
 
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
 pub struct SetuidAlert {
-    pub pid: u64,
+    pub pid: u32,
+    pub _padding: u32,
     pub binprm_inode: u64,
     pub old_uid: u32,
     pub old_gid: u32,
@@ -25,13 +38,48 @@ pub struct SetuidAlert {
     pub new_gid: u32,
 }
 
+impl SetuidAlert {
+    pub fn new(
+        pid: u32,
+        binprm_inode: u64,
+        old_uid: u32,
+        old_gid: u32,
+        new_uid: u32,
+        new_gid: u32,
+    ) -> Self {
+        Self {
+            pid,
+            _padding: 0,
+            binprm_inode,
+            old_uid,
+            old_gid,
+            new_uid,
+            new_gid,
+        }
+    }
+}
+
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
 pub struct SocketBindAlert {
-    pub pid: u64,
+    pub pid: u32,
+    pub _padding1: u32,
     pub binprm_inode: u64,
-    pub port: u64,
+    pub port: u16,
+    pub _padding2: [u16; 3],
+}
+
+impl SocketBindAlert {
+    pub fn new(pid: u32, binprm_inode: u64, port: u16) -> Self {
+        Self {
+            pid,
+            _padding1: 0,
+            binprm_inode,
+            port,
+            _padding2: [0; 3],
+        }
+    }
 }
 
 #[repr(C)]
@@ -40,34 +88,49 @@ pub struct SocketBindAlert {
 pub struct SocketConnectAlert {
     pub pid: u64,
     pub binprm_inode: u64,
-    pub addr: u64,
+    pub addr: u32,
+    pub _padding: u32,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Paths {
     pub all: bool,
+    pub _padding: [u8; 7],
     pub len: usize,
     pub paths: [u64; MAX_PATHS],
-    pub _padding: [u8; 7],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Ports {
     pub all: bool,
+    pub _padding1: [u8; 7],
     pub len: usize,
     pub ports: [u16; MAX_PORTS],
-    pub _padding: [u8; 7],
+    pub _padding2: [u16; 3 * MAX_PORTS],
+}
+
+impl Ports {
+    pub fn new(all: bool, len: usize, ports: [u16; MAX_PORTS]) -> Self {
+        Self {
+            all,
+            _padding1: [0; 7],
+            len,
+            ports,
+            _padding2: [0; 3 * MAX_PORTS],
+        }
+    }
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Ipv4Addrs {
     pub all: bool,
+    pub _padding1: [u8; 7],
     pub len: usize,
     pub addrs: [u32; MAX_IPV4ADDRS],
-    pub _padding: [u8; 7],
+    pub _padding2: [u32; MAX_IPV4ADDRS],
 }
 
 #[cfg(feature = "user")]
