@@ -11,6 +11,8 @@ pub const MAX_PORTS: usize = 1;
 pub const MAX_IPV4ADDRS: usize = 1;
 pub const MAX_IPV6ADDRS: usize = 1;
 
+pub trait Alert {}
+
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
@@ -32,6 +34,8 @@ impl AlertFileOpen {
         }
     }
 }
+
+impl Alert for AlertFileOpen {}
 
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
@@ -68,6 +72,8 @@ impl AlertSetuid {
     }
 }
 
+impl Alert for AlertSetuid {}
+
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
@@ -93,38 +99,14 @@ impl AlertSocketBind {
     }
 }
 
+impl Alert for AlertSocketBind {}
+
 #[cfg(feature = "user")]
 fn serialize_ipv4<S>(addr: &u32, s: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
     Ipv4Addr::from(*addr).serialize(s)
-}
-
-#[repr(C)]
-#[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Copy, Clone)]
-pub struct AlertSocketConnectV4 {
-    pub pid: u32,
-    #[cfg_attr(feature = "user", serde(skip))]
-    pub _padding1: u32,
-    pub binprm_inode: u64,
-    #[cfg_attr(feature = "user", serde(serialize_with = "serialize_ipv4"))]
-    pub addr: u32,
-    #[cfg_attr(feature = "user", serde(skip))]
-    pub _padding2: u32,
-}
-
-impl AlertSocketConnectV4 {
-    pub fn new(pid: u32, binprm_inode: u64, addr: u32) -> Self {
-        Self {
-            pid,
-            _padding1: 0,
-            binprm_inode,
-            addr,
-            _padding2: 0,
-        }
-    }
 }
 
 #[cfg(feature = "user")]
@@ -138,25 +120,44 @@ where
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
-pub struct AlertSocketConnectV6 {
+pub struct AlertSocketConnect {
     pub pid: u32,
     #[cfg_attr(feature = "user", serde(skip))]
     pub _padding1: u32,
     pub binprm_inode: u64,
+    #[cfg_attr(feature = "user", serde(serialize_with = "serialize_ipv4"))]
+    pub addr_v4: u32,
+    #[cfg_attr(feature = "user", serde(skip))]
+    pub _padding2: u32,
     #[cfg_attr(feature = "user", serde(serialize_with = "serialize_ipv6"))]
-    pub addr: [u8; 16],
+    pub addr_v6: [u8; 16],
 }
 
-impl AlertSocketConnectV6 {
-    pub fn new(pid: u32, binprm_inode: u64, addr: [u8; 16]) -> Self {
+impl AlertSocketConnect {
+    pub fn new_ipv4(pid: u32, binprm_inode: u64, addr_v4: u32) -> Self {
         Self {
             pid,
             _padding1: 0,
             binprm_inode,
-            addr,
+            addr_v4,
+            _padding2: 0,
+            addr_v6: [0; 16],
+        }
+    }
+
+    pub fn new_ipv6(pid: u32, binprm_inode: u64, addr_v6: [u8; 16]) -> Self {
+        Self {
+            pid,
+            _padding1: 0,
+            binprm_inode,
+            addr_v4: 0,
+            _padding2: 0,
+            addr_v6,
         }
     }
 }
+
+impl Alert for AlertSocketConnect {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]

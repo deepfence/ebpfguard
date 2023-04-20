@@ -1,14 +1,14 @@
 use core::cmp;
 
 use aya_bpf::{cty::c_long, helpers::bpf_probe_read_kernel, programs::LsmContext, BpfContext};
-use guardity_common::{AlertSocketConnectV4, AlertSocketConnectV6, MAX_IPV4ADDRS, MAX_IPV6ADDRS};
+use guardity_common::{AlertSocketConnect, MAX_IPV4ADDRS, MAX_IPV6ADDRS};
 
 use crate::{
     binprm::current_binprm_inode,
     consts::{AF_INET, AF_INET6, INODE_WILDCARD},
     maps::{
-        ALERT_SOCKET_CONNECT_V4, ALERT_SOCKET_CONNECT_V6, ALLOWED_SOCKET_CONNECT_V4,
-        ALLOWED_SOCKET_CONNECT_V6, DENIED_SOCKET_CONNECT_V4, DENIED_SOCKET_CONNECT_V6,
+        ALERT_SOCKET_CONNECT, ALLOWED_SOCKET_CONNECT_V4, ALLOWED_SOCKET_CONNECT_V6,
+        DENIED_SOCKET_CONNECT_V4, DENIED_SOCKET_CONNECT_V6,
     },
     vmlinux::{sockaddr, sockaddr_in, sockaddr_in6},
 };
@@ -24,18 +24,18 @@ fn socket_connect_v4(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<i32, 
         if addrs.all {
             if let Some(addrs) = unsafe { DENIED_SOCKET_CONNECT_V4.get(&INODE_WILDCARD) } {
                 if addrs.all {
-                    ALERT_SOCKET_CONNECT_V4.output(
+                    ALERT_SOCKET_CONNECT.output(
                         &ctx,
-                        &AlertSocketConnectV4::new(ctx.pid(), binprm_inode, addr),
+                        &AlertSocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr),
                         0,
                     );
                     return Ok(-1);
                 }
                 let len = cmp::min(addrs.len, MAX_IPV4ADDRS);
                 if addrs.addrs[..len].contains(&addr) {
-                    ALERT_SOCKET_CONNECT_V4.output(
+                    ALERT_SOCKET_CONNECT.output(
                         &ctx,
-                        &AlertSocketConnectV4::new(ctx.pid(), binprm_inode, addr),
+                        &AlertSocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr),
                         0,
                     );
                     return Ok(-1);
@@ -44,18 +44,18 @@ fn socket_connect_v4(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<i32, 
 
             if let Some(addrs) = unsafe { DENIED_SOCKET_CONNECT_V4.get(&binprm_inode) } {
                 if addrs.all {
-                    ALERT_SOCKET_CONNECT_V4.output(
+                    ALERT_SOCKET_CONNECT.output(
                         &ctx,
-                        &AlertSocketConnectV4::new(ctx.pid(), binprm_inode, addr),
+                        &AlertSocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr),
                         0,
                     );
                     return Ok(-1);
                 }
                 let len = cmp::min(addrs.len, MAX_IPV4ADDRS);
                 if addrs.addrs[..len].contains(&addr) {
-                    ALERT_SOCKET_CONNECT_V4.output(
+                    ALERT_SOCKET_CONNECT.output(
                         &ctx,
-                        &AlertSocketConnectV4::new(ctx.pid(), binprm_inode, addr),
+                        &AlertSocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr),
                         0,
                     );
                     return Ok(-1);
@@ -91,18 +91,18 @@ fn socket_connect_v4(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<i32, 
                 }
             }
 
-            ALERT_SOCKET_CONNECT_V4.output(
+            ALERT_SOCKET_CONNECT.output(
                 &ctx,
-                &AlertSocketConnectV4::new(ctx.pid(), binprm_inode, addr),
+                &AlertSocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr),
                 0,
             );
             return Ok(-1);
         } else {
             let len = cmp::min(addrs.len, MAX_IPV4ADDRS);
             if addrs.addrs[..len].contains(&addr) {
-                ALERT_SOCKET_CONNECT_V4.output(
+                ALERT_SOCKET_CONNECT.output(
                     &ctx,
-                    &AlertSocketConnectV4::new(ctx.pid(), binprm_inode, addr),
+                    &AlertSocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr),
                     0,
                 );
                 return Ok(-1);
@@ -126,18 +126,18 @@ fn socket_connect_v6(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<i32, 
         if addrs.all {
             if let Some(addrs) = unsafe { DENIED_SOCKET_CONNECT_V6.get(&INODE_WILDCARD) } {
                 if addrs.all {
-                    ALERT_SOCKET_CONNECT_V6.output(
+                    ALERT_SOCKET_CONNECT.output(
                         &ctx,
-                        &AlertSocketConnectV6::new(ctx.pid(), binprm_inode, addr),
+                        &AlertSocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr),
                         0,
                     );
                     return Ok(-1);
                 }
                 let len = cmp::min(addrs.len, MAX_IPV6ADDRS);
                 if addrs.addrs[..len].contains(&addr) {
-                    ALERT_SOCKET_CONNECT_V6.output(
+                    ALERT_SOCKET_CONNECT.output(
                         &ctx,
-                        &AlertSocketConnectV6::new(ctx.pid(), binprm_inode, addr),
+                        &AlertSocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr),
                         0,
                     );
                     return Ok(-1);
@@ -146,18 +146,18 @@ fn socket_connect_v6(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<i32, 
 
             if let Some(addrs) = unsafe { DENIED_SOCKET_CONNECT_V6.get(&binprm_inode) } {
                 if addrs.all {
-                    ALERT_SOCKET_CONNECT_V6.output(
+                    ALERT_SOCKET_CONNECT.output(
                         &ctx,
-                        &AlertSocketConnectV6::new(ctx.pid(), binprm_inode, addr),
+                        &AlertSocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr),
                         0,
                     );
                     return Ok(-1);
                 }
                 let len = cmp::min(addrs.len, MAX_IPV6ADDRS);
                 if addrs.addrs[..len].contains(&addr) {
-                    ALERT_SOCKET_CONNECT_V6.output(
+                    ALERT_SOCKET_CONNECT.output(
                         &ctx,
-                        &AlertSocketConnectV6::new(ctx.pid(), binprm_inode, addr),
+                        &AlertSocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr),
                         0,
                     );
                     return Ok(-1);
@@ -193,18 +193,18 @@ fn socket_connect_v6(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<i32, 
                 }
             }
 
-            ALERT_SOCKET_CONNECT_V6.output(
+            ALERT_SOCKET_CONNECT.output(
                 &ctx,
-                &AlertSocketConnectV6::new(ctx.pid(), binprm_inode, addr),
+                &AlertSocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr),
                 0,
             );
             return Ok(-1);
         } else {
             let len = cmp::min(addrs.len, MAX_IPV6ADDRS);
             if addrs.addrs[..len].contains(&addr) {
-                ALERT_SOCKET_CONNECT_V6.output(
+                ALERT_SOCKET_CONNECT.output(
                     &ctx,
-                    &AlertSocketConnectV6::new(ctx.pid(), binprm_inode, addr),
+                    &AlertSocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr),
                     0,
                 );
                 return Ok(-1);

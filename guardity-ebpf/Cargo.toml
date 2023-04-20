@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 aya-bpf = { git = "https://github.com/aya-rs/aya", branch = "main" }
-aya-log-ebpf = { git = "https://github.com/aya-rs/aya", branch = "main" }
 guardity-common = { path = "../guardity-common" }
 
 [lib]
