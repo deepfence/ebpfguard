@@ -8,6 +8,10 @@ aya-bpf = { git = "https://github.com/aya-rs/aya", branch = "main" }
 aya-log-ebpf = { git = "https://github.com/aya-rs/aya", branch = "main" }
 guardity-common = { path = "../guardity-common" }
 
+[lib]
+name = "guardity_ebpf"
+path = "src/lib.rs"
+
 [[bin]]
 name = "guardity"
 path = "src/main.rs"
