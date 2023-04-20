@@ -1,4 +1,10 @@
-#![no_std]
+#![cfg_attr(not(feature = "user"), no_std)]
+
+#[cfg(feature = "user")]
+use std::net::{Ipv4Addr, Ipv6Addr};
+
+#[cfg(feature = "user")]
+use serde::Serialize;
 
 pub const MAX_PATHS: usize = 1;
 pub const MAX_PORTS: usize = 1;
@@ -10,6 +16,7 @@ pub const MAX_IPV6ADDRS: usize = 1;
 #[derive(Copy, Clone)]
 pub struct AlertFileOpen {
     pub pid: u32,
+    #[cfg_attr(feature = "user", serde(skip))]
     pub _padding: u32,
     pub binprm_inode: u64,
     pub inode: u64,
@@ -31,6 +38,7 @@ impl AlertFileOpen {
 #[derive(Copy, Clone)]
 pub struct AlertSetuid {
     pub pid: u32,
+    #[cfg_attr(feature = "user", serde(skip))]
     pub _padding: u32,
     pub binprm_inode: u64,
     pub old_uid: u32,
@@ -65,9 +73,11 @@ impl AlertSetuid {
 #[derive(Copy, Clone)]
 pub struct AlertSocketBind {
     pub pid: u32,
+    #[cfg_attr(feature = "user", serde(skip))]
     pub _padding1: u32,
     pub binprm_inode: u64,
     pub port: u16,
+    #[cfg_attr(feature = "user", serde(skip))]
     pub _padding2: [u16; 3],
 }
 
@@ -83,14 +93,25 @@ impl AlertSocketBind {
     }
 }
 
+#[cfg(feature = "user")]
+fn serialize_ipv4<S>(addr: &u32, s: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    Ipv4Addr::from(*addr).serialize(s)
+}
+
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
 pub struct AlertSocketConnectV4 {
     pub pid: u32,
+    #[cfg_attr(feature = "user", serde(skip))]
     pub _padding1: u32,
     pub binprm_inode: u64,
+    #[cfg_attr(feature = "user", serde(serialize_with = "serialize_ipv4"))]
     pub addr: u32,
+    #[cfg_attr(feature = "user", serde(skip))]
     pub _padding2: u32,
 }
 
@@ -106,13 +127,23 @@ impl AlertSocketConnectV4 {
     }
 }
 
+#[cfg(feature = "user")]
+fn serialize_ipv6<S>(addr: &[u8; 16], s: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    Ipv6Addr::from(addr.to_owned()).serialize(s)
+}
+
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
 pub struct AlertSocketConnectV6 {
     pub pid: u32,
+    #[cfg_attr(feature = "user", serde(skip))]
     pub _padding1: u32,
     pub binprm_inode: u64,
+    #[cfg_attr(feature = "user", serde(serialize_with = "serialize_ipv6"))]
     pub addr: [u8; 16],
 }
 

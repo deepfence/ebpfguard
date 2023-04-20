@@ -127,14 +127,18 @@ impl Addresses {
                 let mut ebpf_addrs_v4 = [0; guardity_common::MAX_IPV4ADDRS];
                 let mut ebpf_addrs_v6_len = 0;
                 let mut ebpf_addrs_v6 = [[0u8; 16]; guardity_common::MAX_IPV6ADDRS];
-                for (i, addr) in addrs.iter().enumerate() {
+                let mut i_v4 = 0;
+                let mut i_v6 = 0;
+                for addr in addrs.iter() {
                     match addr {
                         IpAddr::V4(ipv4) => {
-                            ebpf_addrs_v4[i] = (*ipv4).into();
+                            ebpf_addrs_v4[i_v4] = (*ipv4).into();
+                            i_v4 += 1;
                             ebpf_addrs_v4_len += 1;
                         }
                         IpAddr::V6(ipv6) => {
-                            ebpf_addrs_v6[i] = ipv6.octets();
+                            ebpf_addrs_v6[i_v6] = ipv6.octets();
+                            i_v6 += 1;
                             ebpf_addrs_v6_len += 1;
                         }
                     }
