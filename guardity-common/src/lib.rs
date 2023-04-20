@@ -1,21 +1,21 @@
 #![no_std]
 
-pub const MAX_PATHS: usize = 8;
-pub const MAX_PORTS: usize = 8;
-pub const MAX_IPV4ADDRS: usize = 8;
-pub const MAX_IPV6ADDRS: usize = 8;
+pub const MAX_PATHS: usize = 1;
+pub const MAX_PORTS: usize = 1;
+pub const MAX_IPV4ADDRS: usize = 1;
+pub const MAX_IPV6ADDRS: usize = 1;
 
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
-pub struct FileOpenAlert {
+pub struct AlertFileOpen {
     pub pid: u32,
     pub _padding: u32,
     pub binprm_inode: u64,
     pub inode: u64,
 }
 
-impl FileOpenAlert {
+impl AlertFileOpen {
     pub fn new(pid: u32, binprm_inode: u64, inode: u64) -> Self {
         Self {
             pid,
@@ -29,7 +29,7 @@ impl FileOpenAlert {
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
-pub struct SetuidAlert {
+pub struct AlertSetuid {
     pub pid: u32,
     pub _padding: u32,
     pub binprm_inode: u64,
@@ -39,7 +39,7 @@ pub struct SetuidAlert {
     pub new_gid: u32,
 }
 
-impl SetuidAlert {
+impl AlertSetuid {
     pub fn new(
         pid: u32,
         binprm_inode: u64,
@@ -63,7 +63,7 @@ impl SetuidAlert {
 #[repr(C)]
 #[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
-pub struct SocketBindAlert {
+pub struct AlertSocketBind {
     pub pid: u32,
     pub _padding1: u32,
     pub binprm_inode: u64,
@@ -71,7 +71,7 @@ pub struct SocketBindAlert {
     pub _padding2: [u16; 3],
 }
 
-impl SocketBindAlert {
+impl AlertSocketBind {
     pub fn new(pid: u32, binprm_inode: u64, port: u16) -> Self {
         Self {
             pid,
@@ -225,8 +225,8 @@ pub mod user {
 
     use aya::Pod;
 
-    unsafe impl Pod for FileOpenAlert {}
-    unsafe impl Pod for SetuidAlert {}
+    unsafe impl Pod for AlertFileOpen {}
+    unsafe impl Pod for AlertSetuid {}
     unsafe impl Pod for Paths {}
     unsafe impl Pod for Ports {}
     unsafe impl Pod for Ipv4Addrs {}
