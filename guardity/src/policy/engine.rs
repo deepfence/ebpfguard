@@ -1,6 +1,5 @@
 use aya::{maps::HashMap, Bpf};
 use guardity_common::{Paths, Ports};
-use log::info;
 
 use super::{Policy, PolicySubject};
 use crate::fs;
@@ -8,7 +7,6 @@ use crate::fs;
 pub const INODE_WILDCARD: u64 = 0;
 
 pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
-    info!("Processing policy: {:?}", policy);
     match policy {
         Policy::FileOpen {
             subject,
