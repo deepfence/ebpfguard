@@ -11,6 +11,7 @@ pub mod policy;
 
 pub struct PolicyManager {
     pub bpf: Bpf,
+    pub bprm_check_security: Option<Hook>,
     pub file_open: Option<Hook>,
     pub setuid: Option<Hook>,
     pub socket_bind: Option<Hook>,
@@ -36,11 +37,20 @@ impl PolicyManager {
 
         Ok(Self {
             bpf,
+            bprm_check_security: None,
             file_open: None,
             setuid: None,
             socket_bind: None,
             socket_connect: None,
         })
+    }
+
+    pub fn attach_bprm_check_security(&mut self) -> anyhow::Result<()> {
+        let link = attach_program(&mut self.bpf, "bprm_check_security")?;
+        let bprm_check_security = Hook::new(link)?;
+        self.bprm_check_security = Some(bprm_check_security);
+
+        Ok(())
     }
 
     pub fn attach_file_open(&mut self) -> anyhow::Result<()> {
