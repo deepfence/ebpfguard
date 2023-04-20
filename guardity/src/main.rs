@@ -8,7 +8,9 @@ use aya::{programs::Lsm, Btf};
 use aya_log::BpfLogger;
 use bytes::BytesMut;
 use clap::Parser;
-use guardity_common::{FileOpenAlert, SetuidAlert, SocketBindAlert};
+use guardity_common::{
+    AlertSocketConnectV4, AlertSocketConnectV6, FileOpenAlert, SetuidAlert, SocketBindAlert,
+};
 use log::{info, warn};
 use serde::Serialize;
 use tokio::signal;
@@ -101,6 +103,18 @@ async fn main() -> Result<(), anyhow::Error> {
     read_alerts::<FileOpenAlert>(bpf.take_map("ALERT_FILE_OPEN").unwrap().try_into()?).await;
     read_alerts::<SetuidAlert>(bpf.take_map("ALERT_SETUID").unwrap().try_into()?).await;
     read_alerts::<SocketBindAlert>(bpf.take_map("ALERT_SOCKET_BIND").unwrap().try_into()?).await;
+    read_alerts::<AlertSocketConnectV4>(
+        bpf.take_map("ALERT_SOCKET_CONNECT_V4")
+            .unwrap()
+            .try_into()?,
+    )
+    .await;
+    read_alerts::<AlertSocketConnectV6>(
+        bpf.take_map("ALERT_SOCKET_CONNECT_V6")
+            .unwrap()
+            .try_into()?,
+    )
+    .await;
 
     info!("Waiting for Ctrl-C...");
     signal::ctrl_c().await?;
