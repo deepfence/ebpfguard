@@ -60,6 +60,7 @@ async fn main() -> Result<(), anyhow::Error> {
     create_dir_all(&bpf_path)?;
 
     let mut policy_manager = PolicyManager::new(bpf_path)?;
+    policy_manager.attach_bprm_check_security()?;
     policy_manager.attach_file_open()?;
     policy_manager.attach_task_fix_setuid()?;
     policy_manager.attach_socket_bind()?;

@@ -1,6 +1,7 @@
 #![no_std]
 
 pub mod binprm;
+pub mod bprm_check_security;
 pub mod consts;
 pub mod file_open;
 pub mod maps;

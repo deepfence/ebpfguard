@@ -4,9 +4,17 @@
 use aya_bpf::{macros::lsm, programs::LsmContext};
 
 use guardity_ebpf::{
-    file_open::file_open, setuid::task_fix_setuid, socket_bind::socket_bind,
-    socket_connect::socket_connect,
+    bprm_check_security::bprm_check_security, file_open::file_open, setuid::task_fix_setuid,
+    socket_bind::socket_bind, socket_connect::socket_connect,
 };
+
+#[lsm(name = "bprm_check_security")]
+pub fn prog_bprm_check_security(ctx: LsmContext) -> i32 {
+    match bprm_check_security(ctx) {
+        Ok(ret) => ret,
+        Err(_) => 0,
+    }
+}
 
 #[lsm(name = "file_open")]
 pub fn prog_file_open(ctx: LsmContext) -> i32 {
