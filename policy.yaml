@@ -10,7 +10,13 @@
   deny: !paths
     - /home/vadorovsky/forbidden
 - !socket_bind
-  subject: !process /usr/bin/python
+  subject: all
   allow: !ports
     - 8080
   deny: all
+- !socket_connect
+  subject: all
+  allow: all
+  deny: !addresses
+    - 142.250.185.206
+    - 2a00:1450:4016:809::200e

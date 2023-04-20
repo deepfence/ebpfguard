@@ -42,34 +42,30 @@ pub(crate) static DENIED_SOCKET_BIND: HashMap<u64, Ports> = HashMap::pinned(1024
 /// Map of alerts for `socket_bind` LSM hook inspection.
 #[map]
 pub(crate) static ALERT_SOCKET_BIND: PerfEventArray<AlertSocketBind> =
-    PerfEventArray::with_max_entries(1024, 0);
+    PerfEventArray::pinned(1024, 0);
 
 /// Map of allowed socket connect IPv4 addresses for each binary.
 #[map]
-pub(crate) static ALLOWED_SOCKET_CONNECT_V4: HashMap<u64, Ipv4Addrs> =
-    HashMap::with_max_entries(1024, 0);
+pub(crate) static ALLOWED_SOCKET_CONNECT_V4: HashMap<u64, Ipv4Addrs> = HashMap::pinned(1024, 0);
 
 /// Map of denied socket connect IPv4 addresses for each binary.
 #[map]
-pub(crate) static DENIED_SOCKET_CONNECT_V4: HashMap<u64, Ipv4Addrs> =
-    HashMap::with_max_entries(1024, 0);
+pub(crate) static DENIED_SOCKET_CONNECT_V4: HashMap<u64, Ipv4Addrs> = HashMap::pinned(1024, 0);
 
 /// Map of alerts for `socket_connect` LSM hook inspection.
 #[map]
 pub(crate) static ALERT_SOCKET_CONNECT_V4: PerfEventArray<AlertSocketConnectV4> =
-    PerfEventArray::with_max_entries(1024, 0);
+    PerfEventArray::pinned(1024, 0);
 
 /// Map of allowed socket connect IPv6 addresses for each binary.
 #[map]
-pub(crate) static ALLOWED_SOCKET_CONNECT_V6: HashMap<u64, Ipv6Addrs> =
-    HashMap::with_max_entries(1024, 0);
+pub(crate) static ALLOWED_SOCKET_CONNECT_V6: HashMap<u64, Ipv6Addrs> = HashMap::pinned(1024, 0);
 
 /// Map of denied socket connect IPv6 addresses for each binary.
 #[map]
-pub(crate) static DENIED_SOCKET_CONNECT_V6: HashMap<u64, Ipv6Addrs> =
-    HashMap::with_max_entries(1024, 0);
+pub(crate) static DENIED_SOCKET_CONNECT_V6: HashMap<u64, Ipv6Addrs> = HashMap::pinned(1024, 0);
 
 /// Map of alerts for `socket_connect` LSM hook inspection.
 #[map]
 pub(crate) static ALERT_SOCKET_CONNECT_V6: PerfEventArray<AlertSocketConnectV6> =
-    PerfEventArray::with_max_entries(1024, 0);
+    PerfEventArray::pinned(1024, 0);

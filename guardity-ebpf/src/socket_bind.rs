@@ -41,6 +41,10 @@ pub fn socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
     let sockaddr_in: *const sockaddr_in = sockaddr as *const sockaddr_in;
     let port = u16::from_be(unsafe { (*sockaddr_in).sin_port });
 
+    if port == 0 {
+        return Ok(0);
+    }
+
     let binprm_inode = current_binprm_inode();
 
     if let Some(ports) = unsafe { ALLOWED_SOCKET_BIND.get(&INODE_WILDCARD) } {
