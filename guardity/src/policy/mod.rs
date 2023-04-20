@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{net::IpAddr, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -108,6 +108,47 @@ impl From<guardity_common::Ports> for Ports {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Addresses {
+    #[serde(rename = "all")]
+    All,
+    #[serde(rename = "addresses")]
+    Addresses(Vec<IpAddr>),
+}
+
+impl Addresses {
+    pub fn into_ebpf(self) -> (guardity_common::Ipv4Addrs, guardity_common::Ipv6Addrs) {
+        match self {
+            Addresses::All => (
+                guardity_common::Ipv4Addrs::new_all(),
+                guardity_common::Ipv6Addrs::new_all(),
+            ),
+            Addresses::Addresses(addrs) => {
+                let mut ebpf_addrs_v4_len = 0;
+                let mut ebpf_addrs_v4 = [0; guardity_common::MAX_IPV4ADDRS];
+                let mut ebpf_addrs_v6_len = 0;
+                let mut ebpf_addrs_v6 = [[0u8; 16]; guardity_common::MAX_IPV6ADDRS];
+                for (i, addr) in addrs.iter().enumerate() {
+                    match addr {
+                        IpAddr::V4(ipv4) => {
+                            ebpf_addrs_v4[i] = (*ipv4).into();
+                            ebpf_addrs_v4_len += 1;
+                        }
+                        IpAddr::V6(ipv6) => {
+                            ebpf_addrs_v6[i] = ipv6.octets();
+                            ebpf_addrs_v6_len += 1;
+                        }
+                    }
+                }
+                (
+                    guardity_common::Ipv4Addrs::new(ebpf_addrs_v4_len, ebpf_addrs_v4),
+                    guardity_common::Ipv6Addrs::new(ebpf_addrs_v6_len, ebpf_addrs_v6),
+                )
+            }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Policy {
     #[serde(rename = "file_open")]
     FileOpen {
@@ -123,11 +164,19 @@ pub enum Policy {
         allow: Ports,
         deny: Ports,
     },
+    #[serde(rename = "socket_connect")]
+    SocketConnect {
+        subject: PolicySubject,
+        allow: Addresses,
+        deny: Addresses,
+    },
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    use std::net::{Ipv4Addr, Ipv6Addr};
 
     #[test]
     fn test_file_open() {
@@ -261,5 +310,51 @@ mod test {
                 deny: Ports::All
             }
         )
+    }
+
+    #[test]
+    fn test_socket_connect() {
+        let yaml = "
+- !socket_connect
+  subject: !process /usr/bin/nginx
+  allow: !addresses
+    - 10.0.0.1
+    - 2001:db8:3333:4444:5555:6666:7777:8888
+  deny: all
+- !socket_connect
+  subject: !process /usr/bin/tomcat
+  allow: all
+  deny: !addresses
+    - 172.16.0.1
+    - 2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF
+";
+        let policy = serde_yaml::from_str::<Vec<Policy>>(yaml).unwrap();
+        assert_eq!(policy.len(), 2);
+        assert_eq!(
+            policy[0],
+            Policy::SocketConnect {
+                subject: PolicySubject::Process(PathBuf::from("/usr/bin/nginx")),
+                allow: Addresses::Addresses(vec![
+                    IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)),
+                    IpAddr::V6(Ipv6Addr::new(
+                        0x2001, 0x0db8, 0x3333, 0x4444, 0x5555, 0x6666, 0x7777, 0x8888
+                    ))
+                ]),
+                deny: Addresses::All
+            }
+        );
+        assert_eq!(
+            policy[1],
+            Policy::SocketConnect {
+                subject: PolicySubject::Process(PathBuf::from("/usr/bin/tomcat")),
+                allow: Addresses::All,
+                deny: Addresses::Addresses(vec![
+                    IpAddr::V4(Ipv4Addr::new(172, 16, 0, 1)),
+                    IpAddr::V6(Ipv6Addr::new(
+                        0x2001, 0x0db8, 0x3333, 0x4444, 0xCCCC, 0xDDDD, 0xEEEE, 0xFFFF
+                    )),
+                ]),
+            }
+        );
     }
 }

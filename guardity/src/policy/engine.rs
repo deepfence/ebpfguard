@@ -1,5 +1,5 @@
 use aya::{maps::HashMap, Bpf};
-use guardity_common::{Paths, Ports};
+use guardity_common::{Ipv4Addrs, Ipv6Addrs, Paths, Ports};
 
 use super::{Policy, PolicySubject};
 use crate::fs;
@@ -100,6 +100,71 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                     let mut denied_socket_bind: HashMap<_, u64, Ports> =
                         bpf.map_mut("DENIED_SOCKET_BIND").unwrap().try_into()?;
                     denied_socket_bind.insert(INODE_WILDCARD, deny, 0)?;
+                }
+            }
+        }
+        Policy::SocketConnect {
+            subject,
+            allow,
+            deny,
+        } => {
+            let (allow_v4, allow_v6) = allow.into_ebpf();
+            let (deny_v4, deny_v6) = deny.into_ebpf();
+            match subject {
+                PolicySubject::Process(bin_path) => {
+                    let bin_inode = fs::inode(bin_path)?;
+
+                    let mut allowed_socket_connect_v4: HashMap<_, u64, Ipv4Addrs> = bpf
+                        .map_mut("ALLOWED_SOCKET_CONNECT_V4")
+                        .unwrap()
+                        .try_into()?;
+                    allowed_socket_connect_v4.insert(bin_inode, allow_v4, 0)?;
+
+                    let mut denied_socket_connect_v4: HashMap<_, u64, Ipv4Addrs> = bpf
+                        .map_mut("DENIED_SOCKET_CONNECT_V4")
+                        .unwrap()
+                        .try_into()?;
+                    denied_socket_connect_v4.insert(bin_inode, deny_v4, 0)?;
+
+                    let mut allowed_socket_connect_v6: HashMap<_, u64, Ipv6Addrs> = bpf
+                        .map_mut("ALLOWED_SOCKET_CONNECT_V6")
+                        .unwrap()
+                        .try_into()?;
+                    allowed_socket_connect_v6.insert(bin_inode, allow_v6, 0)?;
+
+                    let mut denied_socket_connect_v6: HashMap<_, u64, Ipv6Addrs> = bpf
+                        .map_mut("DENIED_SOCKET_CONNECT_V6")
+                        .unwrap()
+                        .try_into()?;
+                    denied_socket_connect_v6.insert(bin_inode, deny_v6, 0)?;
+                }
+                PolicySubject::Container(_) => {
+                    unimplemented!();
+                }
+                PolicySubject::All => {
+                    let mut allowed_socket_connect_v4: HashMap<_, u64, Ipv4Addrs> = bpf
+                        .map_mut("ALLOWED_SOCKET_CONNECT_V4")
+                        .unwrap()
+                        .try_into()?;
+                    allowed_socket_connect_v4.insert(INODE_WILDCARD, allow_v4, 0)?;
+
+                    let mut denied_socket_connect_v4: HashMap<_, u64, Ipv4Addrs> = bpf
+                        .map_mut("DENIED_SOCKET_CONNECT_V4")
+                        .unwrap()
+                        .try_into()?;
+                    denied_socket_connect_v4.insert(INODE_WILDCARD, deny_v4, 0)?;
+
+                    let mut allowed_socket_connect_v6: HashMap<_, u64, Ipv6Addrs> = bpf
+                        .map_mut("ALLOWED_SOCKET_CONNECT_V6")
+                        .unwrap()
+                        .try_into()?;
+                    allowed_socket_connect_v6.insert(INODE_WILDCARD, allow_v6, 0)?;
+
+                    let mut denied_socket_connect_v6: HashMap<_, u64, Ipv6Addrs> = bpf
+                        .map_mut("DENIED_SOCKET_CONNECT_V6")
+                        .unwrap()
+                        .try_into()?;
+                    denied_socket_connect_v6.insert(INODE_WILDCARD, deny_v6, 0)?;
                 }
             }
         }
