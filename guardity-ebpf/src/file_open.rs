@@ -6,8 +6,8 @@ use guardity_common::{AlertFileOpen, MAX_PATHS};
 use crate::{
     binprm::current_binprm_inode,
     consts::INODE_WILDCARD,
-    maps::{ALERT_FILE_OPEN, ALLOWED_FILE_OPEN, DENIED_FILE_OPEN},
-    vmlinux::file,
+    // maps::{ALERT_FILE_OPEN, ALLOWED_FILE_OPEN, DENIED_FILE_OPEN},
+    vmlinux::file, maps::{ALLOWED_FILE_OPEN, DENIED_FILE_OPEN, ALERT_FILE_OPEN},
 };
 
 const MAX_DIR_DEPTH: usize = 16;

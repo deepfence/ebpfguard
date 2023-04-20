@@ -4,8 +4,7 @@ use guardity_common::AlertSetuid;
 use crate::{
     binprm::current_binprm_inode,
     consts::INODE_WILDCARD,
-    maps::{ALERT_SETUID, ALLOWED_SETUID, DENIED_SETUID},
-    vmlinux::cred,
+    vmlinux::cred, maps::{ALLOWED_SETUID, DENIED_SETUID, ALERT_SETUID},
 };
 
 /// Inspects the context of `task_fix_setuid` LSM hook and decides whether to

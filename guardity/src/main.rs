@@ -3,19 +3,13 @@ use std::path::PathBuf;
 
 use aya::maps::{AsyncPerfEventArray, MapData};
 use aya::util::online_cpus;
-use aya::{include_bytes_aligned, BpfLoader};
-use aya::{programs::Lsm, Btf};
-use aya_log::BpfLogger;
 use bytes::BytesMut;
 use clap::Parser;
-use guardity_common::{
-    AlertFileOpen, AlertSetuid, AlertSocketBind, AlertSocketConnectV4, AlertSocketConnectV6,
-};
-use log::{info, warn};
+use guardity::PolicyManager;
+use guardity_common::{AlertFileOpen, AlertSetuid, AlertSocketBind, AlertSocketConnect};
+use log::info;
 use serde::Serialize;
 use tokio::signal;
-
-use guardity::policy::{engine, reader};
 
 #[derive(Debug, Parser)]
 struct Opt {
@@ -64,53 +58,41 @@ async fn main() -> Result<(), anyhow::Error> {
     // reach for `Bpf::load_file` instead.
     let bpf_path = opt.bpffs_path.join(opt.bpffs_dir);
     create_dir_all(&bpf_path)?;
-    #[cfg(debug_assertions)]
-    let mut bpf = BpfLoader::new()
-        .map_pin_path(&bpf_path)
-        .load(include_bytes_aligned!(
-            "../../target/bpfel-unknown-none/debug/guardity"
-        ))?;
-    #[cfg(not(debug_assertions))]
-    let mut bpf = BpfLoader::new()
-        .map_pin_path(&bpf_path)
-        .load(include_bytes_aligned!(
-            "../../target/bpfel-unknown-none/release/guardity"
-        ))?;
-    if let Err(e) = BpfLogger::init(&mut bpf) {
-        // This can happen if you remove all log statements from your eBPF program.
-        warn!("failed to initialize eBPF logger: {}", e);
-    }
-    let btf = Btf::from_sys_fs()?;
-    let programs = vec![
-        "file_open",
-        "task_fix_setuid",
-        "socket_bind",
-        "socket_connect",
-    ];
-    for name in programs {
-        let program: &mut Lsm = bpf.program_mut(name).unwrap().try_into()?;
-        program.load(name, &btf)?;
-        program.attach()?;
-    }
 
-    for p in opt.policy {
-        let policies = reader::read_policies(p)?;
-        for policy in policies {
-            engine::process_policy(&mut bpf, policy)?;
-        }
-    }
+    let mut policy_manager = PolicyManager::new(bpf_path)?;
+    policy_manager.attach_file_open()?;
+    policy_manager.attach_task_fix_setuid()?;
+    policy_manager.attach_socket_bind()?;
+    policy_manager.attach_socket_connect()?;
 
-    read_alerts::<AlertFileOpen>(bpf.take_map("ALERT_FILE_OPEN").unwrap().try_into()?).await;
-    read_alerts::<AlertSetuid>(bpf.take_map("ALERT_SETUID").unwrap().try_into()?).await;
-    read_alerts::<AlertSocketBind>(bpf.take_map("ALERT_SOCKET_BIND").unwrap().try_into()?).await;
-    read_alerts::<AlertSocketConnectV4>(
-        bpf.take_map("ALERT_SOCKET_CONNECT_V4")
+    read_alerts::<AlertFileOpen>(
+        policy_manager
+            .bpf
+            .take_map("ALERT_FILE_OPEN")
             .unwrap()
             .try_into()?,
     )
     .await;
-    read_alerts::<AlertSocketConnectV6>(
-        bpf.take_map("ALERT_SOCKET_CONNECT_V6")
+    read_alerts::<AlertSetuid>(
+        policy_manager
+            .bpf
+            .take_map("ALERT_SETUID")
+            .unwrap()
+            .try_into()?,
+    )
+    .await;
+    read_alerts::<AlertSocketBind>(
+        policy_manager
+            .bpf
+            .take_map("ALERT_SOCKET_BIND")
+            .unwrap()
+            .try_into()?,
+    )
+    .await;
+    read_alerts::<AlertSocketConnect>(
+        policy_manager
+            .bpf
+            .take_map("ALERT_SOCKET_CONNECT")
             .unwrap()
             .try_into()?,
     )

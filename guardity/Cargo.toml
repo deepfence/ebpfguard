@@ -6,7 +6,6 @@ publish = false
 
 [dependencies]
 aya = { git = "https://github.com/aya-rs/aya", branch = "main", features=["async_tokio"] }
-aya-log = { git = "https://github.com/aya-rs/aya", branch = "main" }
 bytes = "1.4"
 clap = { version = "4.2", features = ["derive"] }
 guardity-common = { path = "../guardity-common", features = ["user"] }
@@ -17,6 +16,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 tokio = { version = "1.25", features = ["macros", "rt", "rt-multi-thread", "net", "signal"] }
+thiserror = "1.0"
 
 [[bin]]
 name = "guardity"
