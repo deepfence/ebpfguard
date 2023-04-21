@@ -1,5 +1,5 @@
 use aya_bpf::{maps::HashMap, programs::LsmContext, BpfContext};
-use guardity_common::{AlertFileOpen, Paths, MAX_PATHS};
+use guardity_common::{alerts, Paths, MAX_PATHS};
 
 use crate::{
     binprm::current_binprm_inode,
@@ -75,7 +75,7 @@ fn check_conditions_and_alert(
     match check_conditions(map, file, inode, binprm_inode, mode) {
         Action::Allow => Action::Allow,
         Action::Deny => {
-            ALERT_FILE_OPEN.output(ctx, &AlertFileOpen::new(ctx.pid(), binprm_inode, inode), 0);
+            ALERT_FILE_OPEN.output(ctx, &alerts::FileOpen::new(ctx.pid(), binprm_inode, inode), 0);
             Action::Deny
         }
     }

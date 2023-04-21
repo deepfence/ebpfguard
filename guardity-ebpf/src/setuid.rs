@@ -1,10 +1,11 @@
 use aya_bpf::{cty::c_long, programs::LsmContext, BpfContext};
-use guardity_common::AlertSetuid;
+use guardity_common::alerts;
 
 use crate::{
     binprm::current_binprm_inode,
     consts::INODE_WILDCARD,
-    vmlinux::cred, maps::{ALLOWED_SETUID, DENIED_SETUID, ALERT_SETUID},
+    maps::{ALERT_SETUID, ALLOWED_SETUID, DENIED_SETUID},
+    vmlinux::cred,
 };
 
 /// Inspects the context of `task_fix_setuid` LSM hook and decides whether to
@@ -41,7 +42,14 @@ pub fn task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
         if unsafe { DENIED_SETUID.get(&binprm_inode).is_some() } {
             ALERT_SETUID.output(
                 &ctx,
-                &AlertSetuid::new(ctx.pid(), binprm_inode, old_uid, old_gid, new_uid, new_gid),
+                &alerts::TaskFixSetuid::new(
+                    ctx.pid(),
+                    binprm_inode,
+                    old_uid,
+                    old_gid,
+                    new_uid,
+                    new_gid,
+                ),
                 0,
             );
             return Ok(-1);
@@ -55,7 +63,14 @@ pub fn task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
         }
         ALERT_SETUID.output(
             &ctx,
-            &AlertSetuid::new(ctx.pid(), binprm_inode, old_uid, old_gid, new_uid, new_gid),
+            &alerts::TaskFixSetuid::new(
+                ctx.pid(),
+                binprm_inode,
+                old_uid,
+                old_gid,
+                new_uid,
+                new_gid,
+            ),
             0,
         );
         return Ok(-1);

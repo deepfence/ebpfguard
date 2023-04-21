@@ -27,9 +27,6 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                         bpf.map_mut("DENIED_FILE_OPEN").unwrap().try_into()?;
                     denied_file_open.insert(bin_inode, deny, 0)?;
                 }
-                PolicySubject::Container(_) => {
-                    unimplemented!();
-                }
                 PolicySubject::All => {
                     let mut allowed_file_open: HashMap<_, u64, Paths> =
                         bpf.map_mut("ALLOWED_FILE_OPEN").unwrap().try_into()?;
@@ -54,9 +51,6 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                             bpf.map_mut("DENIED_SETUID").unwrap().try_into()?;
                         denied_setuid.insert(inode, 0, 0)?;
                     }
-                }
-                PolicySubject::Container(_) => {
-                    unimplemented!();
                 }
                 PolicySubject::All => {
                     if allow {
@@ -88,9 +82,6 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                     let mut denied_socket_bind: HashMap<_, u64, Ports> =
                         bpf.map_mut("DENIED_SOCKET_BIND").unwrap().try_into()?;
                     denied_socket_bind.insert(inode, deny, 0)?;
-                }
-                PolicySubject::Container(_) => {
-                    unimplemented!();
                 }
                 PolicySubject::All => {
                     let mut allowed_socket_bind: HashMap<_, u64, Ports> =
@@ -137,9 +128,6 @@ pub fn process_policy(bpf: &mut Bpf, policy: Policy) -> anyhow::Result<()> {
                         .unwrap()
                         .try_into()?;
                     denied_socket_connect_v6.insert(bin_inode, deny_v6, 0)?;
-                }
-                PolicySubject::Container(_) => {
-                    unimplemented!();
                 }
                 PolicySubject::All => {
                     let mut allowed_socket_connect_v4: HashMap<_, u64, Ipv4Addrs> = bpf

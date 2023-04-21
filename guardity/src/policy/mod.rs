@@ -1,4 +1,8 @@
-use std::{net::IpAddr, path::PathBuf};
+use std::{
+    fmt::{Display, Formatter},
+    net::IpAddr,
+    path::PathBuf,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,10 +15,17 @@ pub mod reader;
 pub enum PolicySubject {
     #[serde(rename = "process")]
     Process(PathBuf),
-    #[serde(rename = "container")]
-    Container(String),
     #[serde(rename = "all")]
     All,
+}
+
+impl Display for PolicySubject {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PolicySubject::Process(path) => write!(f, "{}", path.display()),
+            PolicySubject::All => write!(f, "all"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,21 +48,13 @@ impl Into<guardity_common::Paths> for Paths {
         match self {
             Paths::All => guardity_common::Paths {
                 paths: [0; guardity_common::MAX_PATHS],
-                // len: 0,
-                // all: 1,
-                // _padding: [0; 7],
             },
             Paths::Paths(paths) => {
                 let mut ebpf_paths = [0; guardity_common::MAX_PATHS];
                 for (i, path) in paths.iter().enumerate() {
                     ebpf_paths[i] = fs::inode(path).unwrap();
                 }
-                guardity_common::Paths {
-                    paths: ebpf_paths,
-                    // len: paths.len(),
-                    // all: 0,
-                    // _padding: [0; 7],
-                }
+                guardity_common::Paths { paths: ebpf_paths }
             }
         }
     }
@@ -193,14 +196,9 @@ mod test {
   allow: !paths
     - /etc/myapp
   deny: all
-- !file_open
-  subject: !container docker.io/myapp
-  allow: !paths
-    - /etc/myapp
-  deny: all
 ";
         let policy = serde_yaml::from_str::<Vec<Policy>>(yaml).unwrap();
-        assert_eq!(policy.len(), 3);
+        assert_eq!(policy.len(), 2);
         assert_eq!(
             policy[0],
             Policy::FileOpen {
@@ -217,14 +215,6 @@ mod test {
                 deny: Paths::All
             }
         );
-        assert_eq!(
-            policy[2],
-            Policy::FileOpen {
-                subject: PolicySubject::Container("docker.io/myapp".to_string()),
-                allow: Paths::Paths(vec![PathBuf::from("/etc/myapp")]),
-                deny: Paths::All
-            }
-        );
     }
 
     #[test]
@@ -236,12 +226,9 @@ mod test {
 - !setuid
   subject: !process /usr/bin/sudo
   allow: true
-- !setuid
-  subject: !container deepfenceio/deepfence_agent_ce
-  allow: true
 ";
         let policy = serde_yaml::from_str::<Vec<Policy>>(yaml).unwrap();
-        assert_eq!(policy.len(), 3);
+        assert_eq!(policy.len(), 2);
         assert_eq!(
             policy[0],
             Policy::SetUid {
@@ -253,13 +240,6 @@ mod test {
             policy[1],
             Policy::SetUid {
                 subject: PolicySubject::Process(PathBuf::from("/usr/bin/sudo")),
-                allow: true
-            }
-        );
-        assert_eq!(
-            policy[2],
-            Policy::SetUid {
-                subject: PolicySubject::Container("deepfenceio/deepfence_agent_ce".to_string()),
                 allow: true
             }
         );
@@ -279,15 +259,9 @@ mod test {
   allow: !ports
     - 8080
   deny: all
-- !socket_bind
-  subject: !container docker.io/nginx
-  allow: !ports
-    - 80
-    - 443
-  deny: all
 ";
         let policy = serde_yaml::from_str::<Vec<Policy>>(yaml).unwrap();
-        assert_eq!(policy.len(), 3);
+        assert_eq!(policy.len(), 2);
         assert_eq!(
             policy[0],
             Policy::SocketBind {
@@ -304,14 +278,6 @@ mod test {
                 deny: Ports::All
             }
         );
-        assert_eq!(
-            policy[2],
-            Policy::SocketBind {
-                subject: PolicySubject::Container("docker.io/nginx".to_string()),
-                allow: Ports::Ports(vec![80, 443]),
-                deny: Ports::All
-            }
-        )
     }
 
     #[test]
