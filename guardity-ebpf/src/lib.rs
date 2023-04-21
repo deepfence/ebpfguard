@@ -13,3 +13,22 @@ pub mod socket_connect;
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
 pub mod vmlinux;
+
+pub enum Mode {
+    Allowlist,
+    Denylist,
+}
+
+pub enum Action {
+    Allow,
+    Deny,
+}
+
+impl From<Action> for i32 {
+    fn from(action: Action) -> Self {
+        match action {
+            Action::Allow => 0,
+            Action::Deny => -1,
+        }
+    }
+}
