@@ -14,12 +14,34 @@ pub const MAX_IPV6ADDRS: usize = 1;
 pub trait Alert {}
 
 #[repr(C)]
-#[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "user", derive(Debug, serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone)]
+pub struct AlertBprmCheckSecurity {
+    pub pid: u32,
+    #[cfg_attr(feature = "user", serde(skip))]
+    _padding: u32,
+    pub binprm_inode: u64,
+}
+
+impl AlertBprmCheckSecurity {
+    pub fn new(pid: u32, binprm_inode: u64) -> Self {
+        Self {
+            pid,
+            _padding: 0,
+            binprm_inode,
+        }
+    }
+}
+
+impl Alert for AlertBprmCheckSecurity {}
+
+#[repr(C)]
+#[cfg_attr(feature = "user", derive(Debug, serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
 pub struct AlertFileOpen {
     pub pid: u32,
     #[cfg_attr(feature = "user", serde(skip))]
-    pub _padding: u32,
+    _padding: u32,
     pub binprm_inode: u64,
     pub inode: u64,
 }
@@ -38,12 +60,12 @@ impl AlertFileOpen {
 impl Alert for AlertFileOpen {}
 
 #[repr(C)]
-#[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "user", derive(Debug, serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
 pub struct AlertSetuid {
     pub pid: u32,
     #[cfg_attr(feature = "user", serde(skip))]
-    pub _padding: u32,
+    _padding: u32,
     pub binprm_inode: u64,
     pub old_uid: u32,
     pub old_gid: u32,
@@ -75,16 +97,16 @@ impl AlertSetuid {
 impl Alert for AlertSetuid {}
 
 #[repr(C)]
-#[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "user", derive(Debug, serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
 pub struct AlertSocketBind {
     pub pid: u32,
     #[cfg_attr(feature = "user", serde(skip))]
-    pub _padding1: u32,
+    _padding1: u32,
     pub binprm_inode: u64,
     pub port: u16,
     #[cfg_attr(feature = "user", serde(skip))]
-    pub _padding2: [u16; 3],
+    _padding2: [u16; 3],
 }
 
 impl AlertSocketBind {
@@ -118,17 +140,17 @@ where
 }
 
 #[repr(C)]
-#[cfg_attr(feature = "user", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "user", derive(Debug, serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone)]
 pub struct AlertSocketConnect {
     pub pid: u32,
     #[cfg_attr(feature = "user", serde(skip))]
-    pub _padding1: u32,
+    _padding1: u32,
     pub binprm_inode: u64,
     #[cfg_attr(feature = "user", serde(serialize_with = "serialize_ipv4"))]
     pub addr_v4: u32,
     #[cfg_attr(feature = "user", serde(skip))]
-    pub _padding2: u32,
+    _padding2: u32,
     #[cfg_attr(feature = "user", serde(serialize_with = "serialize_ipv6"))]
     pub addr_v6: [u8; 16],
 }
@@ -162,21 +184,17 @@ impl Alert for AlertSocketConnect {}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Paths {
-    // pub all: bool,
-    // pub _padding: [u8; 7],
-    // pub len: usize,
     pub paths: [u64; MAX_PATHS],
-    // pub all: u64,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Ports {
     pub all: bool,
-    pub _padding1: [u8; 7],
+    _padding1: [u8; 7],
     pub len: usize,
     pub ports: [u16; MAX_PORTS],
-    pub _padding2: [u16; 3 * MAX_PORTS],
+    _padding2: [u16; 3 * MAX_PORTS],
 }
 
 impl Ports {
