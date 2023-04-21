@@ -191,6 +191,11 @@ impl Ports {
     }
 }
 
+pub trait IpAddrs<T, const U: usize> {
+    fn all(&self) -> bool;
+    fn addrs(&self) -> [T; U];
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Ipv4Addrs {
@@ -207,10 +212,17 @@ impl Ipv4Addrs {
             addrs: [0; MAX_IPV4ADDRS],
         }
     }
+}
+
+impl IpAddrs<u32, MAX_IPV4ADDRS> for Ipv4Addrs {
+    #[inline(always)]
+    fn all(&self) -> bool {
+        self.addrs[0] == 0
+    }
 
     #[inline(always)]
-    pub fn all(&self) -> bool {
-        self.addrs[0] == 0
+    fn addrs(&self) -> [u32; MAX_IPV4ADDRS] {
+        self.addrs
     }
 }
 
@@ -230,10 +242,17 @@ impl Ipv6Addrs {
             addrs: [[0; 16]; MAX_IPV4ADDRS],
         }
     }
+}
+
+impl IpAddrs<[u8; 16], MAX_IPV6ADDRS> for Ipv6Addrs {
+    #[inline(always)]
+    fn all(&self) -> bool {
+        self.addrs[0] == [0; 16]
+    }
 
     #[inline(always)]
-    pub fn all(&self) -> bool {
-        self.addrs[0] == [0; 16]
+    fn addrs(&self) -> [[u8; 16]; MAX_IPV6ADDRS] {
+        self.addrs
     }
 }
 

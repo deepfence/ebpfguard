@@ -40,7 +40,7 @@ pub fn prog_socket_bind(ctx: LsmContext) -> i32 {
 #[lsm(name = "socket_connect")]
 pub fn prog_socket_connect(ctx: LsmContext) -> i32 {
     match socket_connect(ctx) {
-        Ok(ret) => ret,
+        Ok(ret) => ret.into(),
         Err(_) => 0,
     }
 }
