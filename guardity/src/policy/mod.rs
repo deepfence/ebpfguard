@@ -125,9 +125,7 @@ impl Addresses {
                 guardity_common::Ipv6Addrs::new_all(),
             ),
             Addresses::Addresses(addrs) => {
-                let mut ebpf_addrs_v4_len = 0;
                 let mut ebpf_addrs_v4 = [0; guardity_common::MAX_IPV4ADDRS];
-                let mut ebpf_addrs_v6_len = 0;
                 let mut ebpf_addrs_v6 = [[0u8; 16]; guardity_common::MAX_IPV6ADDRS];
                 let mut i_v4 = 0;
                 let mut i_v6 = 0;
@@ -136,18 +134,16 @@ impl Addresses {
                         IpAddr::V4(ipv4) => {
                             ebpf_addrs_v4[i_v4] = (*ipv4).into();
                             i_v4 += 1;
-                            ebpf_addrs_v4_len += 1;
                         }
                         IpAddr::V6(ipv6) => {
                             ebpf_addrs_v6[i_v6] = ipv6.octets();
                             i_v6 += 1;
-                            ebpf_addrs_v6_len += 1;
                         }
                     }
                 }
                 (
-                    guardity_common::Ipv4Addrs::new(ebpf_addrs_v4_len, ebpf_addrs_v4),
-                    guardity_common::Ipv6Addrs::new(ebpf_addrs_v6_len, ebpf_addrs_v6),
+                    guardity_common::Ipv4Addrs::new(ebpf_addrs_v4),
+                    guardity_common::Ipv6Addrs::new(ebpf_addrs_v6),
                 )
             }
         }
