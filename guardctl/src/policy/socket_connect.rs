@@ -45,7 +45,7 @@ pub(crate) fn list_socket_connect(bpf: &mut Bpf) -> anyhow::Result<TableStruct> 
     for subject in subjects {
         let mut allowed = match allowed_socket_connect_v4.get(&subject, 0) {
             Ok(allowed) => {
-                if allowed.all {
+                if allowed.all() {
                     Addresses::All
                 } else {
                     Addresses::Addresses(
@@ -63,7 +63,7 @@ pub(crate) fn list_socket_connect(bpf: &mut Bpf) -> anyhow::Result<TableStruct> 
         if let Addresses::Addresses(addrs) = &mut allowed {
             match allowed_socket_connect_v6.get(&subject, 0) {
                 Ok(allowed) => {
-                    if allowed.all {
+                    if allowed.all() {
                         anyhow::bail!("Inconsistent policies: allowed all IPv6 addresses, but specified IPv4 addresses")
                     } else {
                         addrs.extend(allowed.addrs.iter().map(|a| IpAddr::V6(Ipv6Addr::from(*a))));
@@ -76,7 +76,7 @@ pub(crate) fn list_socket_connect(bpf: &mut Bpf) -> anyhow::Result<TableStruct> 
 
         let mut denied = match denied_socket_connect_v4.get(&subject, 0) {
             Ok(denied) => {
-                if denied.all {
+                if denied.all() {
                     Addresses::All
                 } else {
                     Addresses::Addresses(
@@ -94,7 +94,7 @@ pub(crate) fn list_socket_connect(bpf: &mut Bpf) -> anyhow::Result<TableStruct> 
         if let Addresses::Addresses(addrs) = &mut denied {
             match denied_socket_connect_v6.get(&subject, 0) {
                 Ok(denied) => {
-                    if denied.all {
+                    if denied.all() {
                         anyhow::bail!("Inconsistent policies: denied all IPv6 addresses, but specified IPv4 addresses")
                     } else {
                         addrs.extend(denied.addrs.iter().map(|a| IpAddr::V6(Ipv6Addr::from(*a))));

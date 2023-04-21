@@ -194,61 +194,46 @@ impl Ports {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Ipv4Addrs {
-    pub all: bool,
-    pub _padding1: [u8; 7],
-    pub len: usize,
     pub addrs: [u32; MAX_IPV4ADDRS],
-    pub _padding2: [u32; MAX_IPV4ADDRS],
 }
 
 impl Ipv4Addrs {
-    pub fn new(len: usize, addrs: [u32; MAX_IPV4ADDRS]) -> Self {
-        Self {
-            all: false,
-            _padding1: [0; 7],
-            len,
-            addrs,
-            _padding2: [0; MAX_IPV4ADDRS],
-        }
+    pub fn new(addrs: [u32; MAX_IPV4ADDRS]) -> Self {
+        Self { addrs }
     }
 
     pub fn new_all() -> Self {
         Self {
-            all: true,
-            _padding1: [0; 7],
-            len: 0,
             addrs: [0; MAX_IPV4ADDRS],
-            _padding2: [0; MAX_IPV4ADDRS],
         }
+    }
+
+    #[inline(always)]
+    pub fn all(&self) -> bool {
+        self.addrs[0] == 0
     }
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Ipv6Addrs {
-    pub all: bool,
-    pub _padding1: [u8; 7],
-    pub len: usize,
     pub addrs: [[u8; 16]; MAX_IPV4ADDRS],
 }
 
 impl Ipv6Addrs {
-    pub fn new(len: usize, addrs: [[u8; 16]; MAX_IPV4ADDRS]) -> Self {
-        Self {
-            all: false,
-            _padding1: [0; 7],
-            len,
-            addrs,
-        }
+    pub fn new(addrs: [[u8; 16]; MAX_IPV4ADDRS]) -> Self {
+        Self { addrs }
     }
 
     pub fn new_all() -> Self {
         Self {
-            all: true,
-            _padding1: [0; 7],
-            len: 0,
             addrs: [[0; 16]; MAX_IPV4ADDRS],
         }
+    }
+
+    #[inline(always)]
+    pub fn all(&self) -> bool {
+        self.addrs[0] == [0; 16]
     }
 }
 
