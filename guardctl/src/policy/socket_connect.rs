@@ -6,6 +6,7 @@ use std::{
 use aya::{maps::HashMap, Bpf};
 use cli_table::{Cell, Style, Table, TableStruct};
 use guardity::policy::engine::INODE_WILDCARD;
+use guardity_common::IpAddrs;
 
 enum Addresses {
     All,
