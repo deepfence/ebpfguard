@@ -6,7 +6,7 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 #[cfg(feature = "user")]
 use serde::Serialize;
 
-pub const MAX_PATHS: usize = 1;
+pub const MAX_PATHS: usize = 4;
 pub const MAX_PORTS: usize = 1;
 pub const MAX_IPV4ADDRS: usize = 1;
 pub const MAX_IPV6ADDRS: usize = 1;
@@ -162,10 +162,11 @@ impl Alert for AlertSocketConnect {}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Paths {
-    pub all: bool,
-    pub _padding: [u8; 7],
-    pub len: usize,
+    // pub all: bool,
+    // pub _padding: [u8; 7],
+    // pub len: usize,
     pub paths: [u64; MAX_PATHS],
+    // pub all: u64,
 }
 
 #[repr(C)]

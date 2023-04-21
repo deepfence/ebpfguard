@@ -37,9 +37,9 @@ impl Into<guardity_common::Paths> for Paths {
         match self {
             Paths::All => guardity_common::Paths {
                 paths: [0; guardity_common::MAX_PATHS],
-                len: 0,
-                all: true,
-                _padding: [0; 7],
+                // len: 0,
+                // all: 1,
+                // _padding: [0; 7],
             },
             Paths::Paths(paths) => {
                 let mut ebpf_paths = [0; guardity_common::MAX_PATHS];
@@ -48,9 +48,9 @@ impl Into<guardity_common::Paths> for Paths {
                 }
                 guardity_common::Paths {
                     paths: ebpf_paths,
-                    len: paths.len(),
-                    all: false,
-                    _padding: [0; 7],
+                    // len: paths.len(),
+                    // all: 0,
+                    // _padding: [0; 7],
                 }
             }
         }
@@ -59,16 +59,18 @@ impl Into<guardity_common::Paths> for Paths {
 
 impl From<guardity_common::Paths> for Paths {
     fn from(paths: guardity_common::Paths) -> Self {
-        if paths.all {
+        if paths.paths[0] == 0 {
             Paths::All
         } else {
-            Paths::Paths(
-                paths.paths[..paths.len]
-                    .iter()
-                    // TODO(vadorovsky): Resolve inodes to paths properly.
-                    .map(|p| PathBuf::from(p.to_string()))
-                    .collect::<Vec<_>>(),
-            )
+            let mut paths_vec = Vec::new();
+            for inode in paths.paths.iter() {
+                if *inode == 0 {
+                    break;
+                }
+                // TODO(vadorovsky): Resolve inodes to paths properly.
+                paths_vec.push(PathBuf::from(inode.to_string()));
+            }
+            Paths::Paths(paths_vec)
         }
     }
 }
