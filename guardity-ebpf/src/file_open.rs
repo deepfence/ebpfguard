@@ -1,13 +1,12 @@
-use core::cmp;
-
 use aya_bpf::{cty::c_long, programs::LsmContext, BpfContext};
 use guardity_common::{AlertFileOpen, MAX_PATHS};
 
 use crate::{
     binprm::current_binprm_inode,
     consts::INODE_WILDCARD,
+    maps::{ALERT_FILE_OPEN, ALLOWED_FILE_OPEN, DENIED_FILE_OPEN},
     // maps::{ALERT_FILE_OPEN, ALLOWED_FILE_OPEN, DENIED_FILE_OPEN},
-    vmlinux::file, maps::{ALLOWED_FILE_OPEN, DENIED_FILE_OPEN, ALERT_FILE_OPEN},
+    vmlinux::file,
 };
 
 const MAX_DIR_DEPTH: usize = 16;
@@ -39,9 +38,9 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
     let inode = unsafe { (*(*(*file).f_path.dentry).d_inode).i_ino };
 
     if let Some(paths) = unsafe { ALLOWED_FILE_OPEN.get(&INODE_WILDCARD) } {
-        if paths.all {
+        if paths.paths[0] == 0 {
             if let Some(paths) = unsafe { DENIED_FILE_OPEN.get(&INODE_WILDCARD) } {
-                if paths.all {
+                if paths.paths[0] == 0 {
                     ALERT_FILE_OPEN.output(
                         &ctx,
                         &AlertFileOpen::new(ctx.pid(), binprm_inode, inode),
@@ -50,8 +49,7 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
                     return Ok(-1);
                 }
 
-                let len = cmp::min(paths.len, MAX_PATHS);
-                if paths.paths[..len].contains(&inode) {
+                if paths.paths[..MAX_PATHS - 1].contains(&inode) {
                     ALERT_FILE_OPEN.output(
                         &ctx,
                         &AlertFileOpen::new(ctx.pid(), binprm_inode, inode),
@@ -70,8 +68,7 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
                     if inode == previous_inode {
                         break;
                     }
-                    let len = cmp::min(paths.len, MAX_PATHS);
-                    if paths.paths[..len].contains(&inode) {
+                    if paths.paths[..MAX_PATHS - 1].contains(&inode) {
                         ALERT_FILE_OPEN.output(
                             &ctx,
                             &AlertFileOpen::new(ctx.pid(), binprm_inode, inode),
@@ -85,7 +82,7 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
             }
 
             if let Some(paths) = unsafe { DENIED_FILE_OPEN.get(&binprm_inode) } {
-                if paths.all {
+                if paths.paths[0] == 0 {
                     ALERT_FILE_OPEN.output(
                         &ctx,
                         &AlertFileOpen::new(ctx.pid(), binprm_inode, inode),
@@ -94,8 +91,7 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
                     return Ok(-1);
                 }
 
-                let len = cmp::min(paths.len, MAX_PATHS);
-                if paths.paths[..len].contains(&inode) {
+                if paths.paths[..MAX_PATHS - 1].contains(&inode) {
                     ALERT_FILE_OPEN.output(
                         &ctx,
                         &AlertFileOpen::new(ctx.pid(), binprm_inode, inode),
@@ -114,8 +110,7 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
                     if inode == previous_inode {
                         break;
                     }
-                    let len = cmp::min(paths.len, MAX_PATHS);
-                    if paths.paths[..len].contains(&inode) {
+                    if paths.paths[..MAX_PATHS - 1].contains(&inode) {
                         ALERT_FILE_OPEN.output(
                             &ctx,
                             &AlertFileOpen::new(ctx.pid(), binprm_inode, inode),
@@ -131,14 +126,13 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
     }
 
     if let Some(paths) = unsafe { DENIED_FILE_OPEN.get(&INODE_WILDCARD) } {
-        if paths.all {
+        if paths.paths[0] == 0 {
             if let Some(paths) = unsafe { ALLOWED_FILE_OPEN.get(&INODE_WILDCARD) } {
-                if paths.all {
+                if paths.paths[0] == 0 {
                     return Ok(0);
                 }
 
-                let len = cmp::min(paths.len, MAX_PATHS);
-                if paths.paths[..len].contains(&inode) {
+                if paths.paths[..MAX_PATHS - 1].contains(&inode) {
                     return Ok(0);
                 }
 
@@ -152,8 +146,7 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
                     if inode == previous_inode {
                         break;
                     }
-                    let len = cmp::min(paths.len, MAX_PATHS);
-                    if paths.paths[..len].contains(&inode) {
+                    if paths.paths[..MAX_PATHS - 1].contains(&inode) {
                         return Ok(0);
                     }
                     previous_inode = inode;
@@ -162,12 +155,11 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
             }
 
             if let Some(paths) = unsafe { ALLOWED_FILE_OPEN.get(&binprm_inode) } {
-                if paths.all {
+                if paths.paths[0] == 0 {
                     return Ok(0);
                 }
 
-                let len = cmp::min(paths.len, MAX_PATHS);
-                if paths.paths[..len].contains(&inode) {
+                if paths.paths[..MAX_PATHS - 1].contains(&inode) {
                     return Ok(0);
                 }
 
@@ -181,8 +173,7 @@ pub fn file_open(ctx: LsmContext) -> Result<i32, c_long> {
                     if inode == previous_inode {
                         break;
                     }
-                    let len = cmp::min(paths.len, MAX_PATHS);
-                    if paths.paths[..len].contains(&inode) {
+                    if paths.paths[..MAX_PATHS - 1].contains(&inode) {
                         return Ok(0);
                     }
                     previous_inode = inode;
