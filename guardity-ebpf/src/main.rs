@@ -18,10 +18,7 @@ pub fn prog_bprm_check_security(ctx: LsmContext) -> i32 {
 
 #[lsm(name = "file_open")]
 pub fn prog_file_open(ctx: LsmContext) -> i32 {
-    match file_open(ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    file_open(ctx).into()
 }
 
 #[lsm(name = "task_fix_setuid")]
