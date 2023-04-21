@@ -8,14 +8,13 @@ use aya::{
     Bpf, BpfLoader, Btf,
 };
 use bytes::BytesMut;
-use guardity_common::{
-    Alert, AlertBprmCheckSecurity, AlertFileOpen, AlertSetuid, AlertSocketBind, AlertSocketConnect,
-};
+use guardity_common::alerts as ebpf_alerts;
 use tokio::{
     sync::mpsc::{self, Receiver},
     task,
 };
 
+pub mod alerts;
 pub mod fs;
 pub mod policy;
 
@@ -149,19 +148,22 @@ fn perf_array(bpf: &mut Bpf, name: &str) -> anyhow::Result<AsyncPerfEventArray<M
     Ok(perf_array)
 }
 
-pub struct Hook<T>
+pub struct Hook<T, U>
 where
-    T: Alert,
+    T: ebpf_alerts::Alert,
+    U: alerts::Alert,
 {
     #[allow(dead_code)]
     program_link: LsmLink,
     perf_array: AsyncPerfEventArray<MapData>,
-    phantom: PhantomData<T>,
+    phantom_t: PhantomData<T>,
+    phantom_u: PhantomData<U>,
 }
 
-impl<T> Hook<T>
+impl<T, U> Hook<T, U>
 where
-    T: Alert + Debug + Send + 'static,
+    T: ebpf_alerts::Alert,
+    U: alerts::Alert + Debug + Send + From<T> + 'static,
 {
     fn new(
         program_link: LsmLink,
@@ -170,11 +172,12 @@ where
         Ok(Self {
             program_link,
             perf_array,
-            phantom: PhantomData,
+            phantom_t: PhantomData,
+            phantom_u: PhantomData,
         })
     }
 
-    pub async fn alerts(&mut self) -> anyhow::Result<Receiver<T>> {
+    pub async fn alerts(&mut self) -> anyhow::Result<Receiver<U>> {
         let (tx, rx) = mpsc::channel(32);
 
         let cpus = online_cpus()?;
@@ -189,9 +192,10 @@ where
                 loop {
                     let events = buf.read_events(&mut buffers).await.unwrap();
                     for buf in buffers.iter_mut().take(events.read) {
-                        let alert = {
+                        let alert: U = {
                             let ptr = buf.as_ptr() as *const T;
-                            unsafe { ptr.read_unaligned() }
+                            let alert = unsafe { ptr.read_unaligned() };
+                            alert.into()
                         };
                         tx.send(alert).await.unwrap();
                     }
@@ -203,8 +207,8 @@ where
     }
 }
 
-pub type BprmCheckSecurityHook = Hook<AlertBprmCheckSecurity>;
-pub type FileOpenHook = Hook<AlertFileOpen>;
-pub type TaskFixSetuidHook = Hook<AlertSetuid>;
-pub type SocketBindHook = Hook<AlertSocketBind>;
-pub type SocketConnectHook = Hook<AlertSocketConnect>;
+pub type BprmCheckSecurityHook = Hook<ebpf_alerts::BprmCheckSecurity, alerts::BprmCheckSecurity>;
+pub type FileOpenHook = Hook<ebpf_alerts::FileOpen, alerts::FileOpen>;
+pub type TaskFixSetuidHook = Hook<ebpf_alerts::TaskFixSetuid, alerts::TaskFixSetUid>;
+pub type SocketBindHook = Hook<ebpf_alerts::SocketBind, alerts::SocketBind>;
+pub type SocketConnectHook = Hook<ebpf_alerts::SocketConnect, alerts::SocketConnect>;

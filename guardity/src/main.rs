@@ -50,27 +50,18 @@ async fn main() -> Result<(), anyhow::Error> {
                 info!("file_open: {}", alert.pid);
             }
             Some(alert) = rx_task_fix_setuid.recv() => {
-                info!("task_fix_setuid: pid={} binprm_inode={}", alert.pid, alert.binprm_inode);
+                info!("task_fix_setuid: pid={} binprm_inode={}", alert.pid, alert.subject);
             }
             Some(alert) = rx_socket_bind.recv() => {
                 info!("socket_bind: pid={}", alert.pid);
             }
             Some(alert) = rx_socket_connect.recv() => {
-                if alert.addr_v4 != 0 {
-                    info!(
-                        "socket_connect: pid={} binprm_inode={} addr={}",
-                        alert.pid,
-                        alert.binprm_inode,
-                        alert.addr_v4
-                    );
-                } else {
-                    info!(
-                        "socket_connect: pid={} binprm_inode={} addr={:?}",
-                        alert.pid,
-                        alert.binprm_inode,
-                        alert.addr_v6
-                    );
-                }
+                info!(
+                    "socket_connect: pid={} binprm_inode={} addr={}",
+                    alert.pid,
+                    alert.subject,
+                    alert.addr
+                );
             }
             _ = signal::ctrl_c() => {
                 break;

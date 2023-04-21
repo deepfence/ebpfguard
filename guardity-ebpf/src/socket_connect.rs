@@ -1,7 +1,7 @@
 use aya_bpf::{
     cty::c_long, helpers::bpf_probe_read_kernel, maps::HashMap, programs::LsmContext, BpfContext,
 };
-use guardity_common::{AlertSocketConnect, IpAddrs, Ipv4Addrs, Ipv6Addrs};
+use guardity_common::{alerts, IpAddrs, Ipv4Addrs, Ipv6Addrs};
 
 use crate::{
     binprm::current_binprm_inode,
@@ -126,7 +126,7 @@ fn check_conditions_and_alert_v4(
         Action::Deny => {
             ALERT_SOCKET_CONNECT.output(
                 ctx,
-                &AlertSocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr),
+                &alerts::SocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr),
                 0,
             );
             Action::Deny
@@ -147,7 +147,7 @@ fn check_conditions_and_alert_v6(
         Action::Deny => {
             ALERT_SOCKET_CONNECT.output(
                 ctx,
-                &AlertSocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr),
+                &alerts::SocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr),
                 0,
             );
             Action::Deny

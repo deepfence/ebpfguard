@@ -1,7 +1,7 @@
 use core::cmp;
 
 use aya_bpf::{cty::c_long, programs::LsmContext, BpfContext};
-use guardity_common::{AlertSocketBind, MAX_PORTS};
+use guardity_common::{alerts, MAX_PORTS};
 
 use crate::{
     binprm::current_binprm_inode,
@@ -53,7 +53,7 @@ pub fn socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
                 if ports.all {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
-                        &AlertSocketBind::new(ctx.pid(), binprm_inode, port),
+                        &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
                     return Ok(-1);
@@ -62,7 +62,7 @@ pub fn socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
                 if ports.ports[..len].contains(&port) {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
-                        &AlertSocketBind::new(ctx.pid(), binprm_inode, port),
+                        &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
                     return Ok(-1);
@@ -73,7 +73,7 @@ pub fn socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
                 if ports.all {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
-                        &AlertSocketBind::new(ctx.pid(), binprm_inode, port),
+                        &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
                     return Ok(-1);
@@ -82,7 +82,7 @@ pub fn socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
                 if ports.ports[..len].contains(&port) {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
-                        &AlertSocketBind::new(ctx.pid(), binprm_inode, port),
+                        &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
                     return Ok(-1);
@@ -120,7 +120,7 @@ pub fn socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
 
             ALERT_SOCKET_BIND.output(
                 &ctx,
-                &AlertSocketBind::new(ctx.pid(), binprm_inode, port),
+                &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                 0,
             );
             return Ok(-1);
@@ -129,7 +129,7 @@ pub fn socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
             if ports.ports[..len].contains(&port) {
                 ALERT_SOCKET_BIND.output(
                     &ctx,
-                    &AlertSocketBind::new(ctx.pid(), binprm_inode, port),
+                    &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                     0,
                 );
                 return Ok(-1);
