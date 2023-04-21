@@ -3,9 +3,13 @@ use aya_bpf::{
     maps::{HashMap, PerfEventArray},
 };
 use guardity_common::{
-    AlertFileOpen, AlertSetuid, AlertSocketBind, AlertSocketConnect, Ipv4Addrs, Ipv6Addrs, Paths,
-    Ports,
+    AlertBprmCheckSecurity, AlertFileOpen, AlertSetuid, AlertSocketBind, AlertSocketConnect,
+    Ipv4Addrs, Ipv6Addrs, Paths, Ports,
 };
+
+#[map]
+pub static ALERT_BPRM_CHECK_SECURITY: PerfEventArray<AlertBprmCheckSecurity> =
+    PerfEventArray::pinned(1024, 0);
 
 /// Map of allowed file open paths for each binary.
 #[map]
@@ -41,8 +45,7 @@ pub static DENIED_SOCKET_BIND: HashMap<u64, Ports> = HashMap::pinned(1024, 0);
 
 /// Map of alerts for `socket_bind` LSM hook inspection.
 #[map]
-pub static ALERT_SOCKET_BIND: PerfEventArray<AlertSocketBind> =
-    PerfEventArray::pinned(1024, 0);
+pub static ALERT_SOCKET_BIND: PerfEventArray<AlertSocketBind> = PerfEventArray::pinned(1024, 0);
 
 /// Map of allowed socket connect IPv4 addresses for each binary.
 #[map]
