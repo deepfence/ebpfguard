@@ -1,32 +1,35 @@
 use std::path::PathBuf;
 
-use aya::Bpf;
 use cli_table::{print_stdout, Cell, Style, Table};
-use guardity::policy::{engine, reader};
+use guardity::{policy::reader, PolicyManager};
 
 use self::{
-    file_open::list_file_open, setuid::list_setuid, socket_bind::list_socket_bind,
-    socket_connect::list_socket_connect,
+    file_open::list_file_open, socket_bind::list_socket_bind, socket_connect::list_socket_connect,
+    task_fix_setuid::list_task_fix_setuid,
 };
 
 pub(crate) mod file_open;
-pub(crate) mod setuid;
 pub(crate) mod socket_bind;
 pub(crate) mod socket_connect;
+pub(crate) mod task_fix_setuid;
 
-pub(crate) fn add_policies(bpf: &mut Bpf, r#path: PathBuf) -> anyhow::Result<()> {
+pub(crate) async fn add_policies(
+    policy_manager: &mut PolicyManager,
+    r#path: PathBuf,
+) -> anyhow::Result<()> {
+    let mut all = policy_manager.manage_all()?;
     let policies = reader::read_policies(r#path)?;
     for policy in policies {
-        engine::process_policy(bpf, policy)?;
+        all.add_policy(policy).await?;
     }
     Ok(())
 }
 
-pub(crate) fn list_policies(bpf: &mut Bpf) -> anyhow::Result<()> {
-    let file_open = list_file_open(bpf)?;
-    let setuid = list_setuid(bpf)?;
-    let socket_bind = list_socket_bind(bpf)?;
-    let socket_connect = list_socket_connect(bpf)?;
+pub(crate) async fn list_policies(policy_manager: &mut PolicyManager) -> anyhow::Result<()> {
+    let file_open = list_file_open(policy_manager).await?;
+    let setuid = list_task_fix_setuid(policy_manager).await?;
+    let socket_bind = list_socket_bind(policy_manager).await?;
+    let socket_connect = list_socket_connect(policy_manager).await?;
 
     let table = vec![
         vec!["file_open".cell()],

@@ -10,3 +10,4 @@ clap = { version = "4.1", features = ["derive"] }
 cli-table = "0.4"
 guardity = { path = "../guardity" }
 guardity-common = { path = "../guardity-common", features = ["user"] }
+tokio = { version = "1.25", features = ["macros", "rt", "rt-multi-thread", "net", "signal", "sync"] }

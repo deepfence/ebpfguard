@@ -4,17 +4,18 @@ use std::{
     path::PathBuf,
 };
 
+use guardity_common::policy as ebpf_policy;
 use serde::{Deserialize, Serialize};
 
 use crate::fs;
 
-pub mod engine;
+pub mod inode;
 pub mod reader;
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PolicySubject {
-    #[serde(rename = "process")]
-    Process(PathBuf),
+    #[serde(rename = "binary")]
+    Binary(PathBuf),
     #[serde(rename = "all")]
     All,
 }
@@ -22,7 +23,7 @@ pub enum PolicySubject {
 impl Display for PolicySubject {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            PolicySubject::Process(path) => write!(f, "{}", path.display()),
+            PolicySubject::Binary(path) => write!(f, "{}", path.display()),
             PolicySubject::All => write!(f, "all"),
         }
     }
@@ -43,25 +44,25 @@ pub enum Paths {
 // operations). Therefore, `Into` and `From` traits have to be implemented
 // separately.
 #[allow(clippy::from_over_into)]
-impl Into<guardity_common::Paths> for Paths {
-    fn into(self) -> guardity_common::Paths {
+impl Into<ebpf_policy::Paths> for Paths {
+    fn into(self) -> ebpf_policy::Paths {
         match self {
-            Paths::All => guardity_common::Paths {
-                paths: [0; guardity_common::MAX_PATHS],
+            Paths::All => ebpf_policy::Paths {
+                paths: [0; ebpf_policy::MAX_PATHS],
             },
             Paths::Paths(paths) => {
-                let mut ebpf_paths = [0; guardity_common::MAX_PATHS];
+                let mut ebpf_paths = [0; ebpf_policy::MAX_PATHS];
                 for (i, path) in paths.iter().enumerate() {
                     ebpf_paths[i] = fs::inode(path).unwrap();
                 }
-                guardity_common::Paths { paths: ebpf_paths }
+                ebpf_policy::Paths { paths: ebpf_paths }
             }
         }
     }
 }
 
-impl From<guardity_common::Paths> for Paths {
-    fn from(paths: guardity_common::Paths) -> Self {
+impl From<ebpf_policy::Paths> for Paths {
+    fn from(paths: ebpf_policy::Paths) -> Self {
         if paths.paths[0] == 0 {
             Paths::All
         } else {
@@ -87,23 +88,23 @@ pub enum Ports {
 }
 
 #[allow(clippy::from_over_into)]
-impl Into<guardity_common::Ports> for Ports {
-    fn into(self) -> guardity_common::Ports {
+impl Into<ebpf_policy::Ports> for Ports {
+    fn into(self) -> ebpf_policy::Ports {
         match self {
-            Ports::All => guardity_common::Ports::new(true, 0, [0; guardity_common::MAX_PORTS]),
+            Ports::All => ebpf_policy::Ports::new(true, 0, [0; ebpf_policy::MAX_PORTS]),
             Ports::Ports(ports) => {
-                let mut ebpf_ports = [0; guardity_common::MAX_PORTS];
+                let mut ebpf_ports = [0; ebpf_policy::MAX_PORTS];
                 for (i, port) in ports.iter().enumerate() {
                     ebpf_ports[i] = *port;
                 }
-                guardity_common::Ports::new(false, ports.len(), ebpf_ports)
+                ebpf_policy::Ports::new(false, ports.len(), ebpf_ports)
             }
         }
     }
 }
 
-impl From<guardity_common::Ports> for Ports {
-    fn from(ports: guardity_common::Ports) -> Self {
+impl From<ebpf_policy::Ports> for Ports {
+    fn from(ports: ebpf_policy::Ports) -> Self {
         if ports.all {
             Ports::All
         } else {
@@ -121,15 +122,15 @@ pub enum Addresses {
 }
 
 impl Addresses {
-    pub fn into_ebpf(self) -> (guardity_common::Ipv4Addrs, guardity_common::Ipv6Addrs) {
+    pub fn into_ebpf(self) -> (ebpf_policy::Ipv4Addrs, ebpf_policy::Ipv6Addrs) {
         match self {
             Addresses::All => (
-                guardity_common::Ipv4Addrs::new_all(),
-                guardity_common::Ipv6Addrs::new_all(),
+                ebpf_policy::Ipv4Addrs::new_all(),
+                ebpf_policy::Ipv6Addrs::new_all(),
             ),
             Addresses::Addresses(addrs) => {
-                let mut ebpf_addrs_v4 = [0; guardity_common::MAX_IPV4ADDRS];
-                let mut ebpf_addrs_v6 = [[0u8; 16]; guardity_common::MAX_IPV6ADDRS];
+                let mut ebpf_addrs_v4 = [0; ebpf_policy::MAX_IPV4ADDRS];
+                let mut ebpf_addrs_v6 = [[0u8; 16]; ebpf_policy::MAX_IPV6ADDRS];
                 let mut i_v4 = 0;
                 let mut i_v6 = 0;
                 for addr in addrs.iter() {
@@ -145,8 +146,8 @@ impl Addresses {
                     }
                 }
                 (
-                    guardity_common::Ipv4Addrs::new(ebpf_addrs_v4),
-                    guardity_common::Ipv6Addrs::new(ebpf_addrs_v6),
+                    ebpf_policy::Ipv4Addrs::new(ebpf_addrs_v4),
+                    ebpf_policy::Ipv6Addrs::new(ebpf_addrs_v6),
                 )
             }
         }
@@ -156,25 +157,40 @@ impl Addresses {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Policy {
     #[serde(rename = "file_open")]
-    FileOpen {
-        subject: PolicySubject,
-        allow: Paths,
-        deny: Paths,
-    },
+    FileOpen(FileOpen),
     #[serde(rename = "setuid")]
-    SetUid { subject: PolicySubject, allow: bool },
+    TaskFixSetuid(TaskFixSetuid),
     #[serde(rename = "socket_bind")]
-    SocketBind {
-        subject: PolicySubject,
-        allow: Ports,
-        deny: Ports,
-    },
+    SocketBind(SocketBind),
     #[serde(rename = "socket_connect")]
-    SocketConnect {
-        subject: PolicySubject,
-        allow: Addresses,
-        deny: Addresses,
-    },
+    SocketConnect(SocketConnect),
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FileOpen {
+    pub subject: PolicySubject,
+    pub allow: Paths,
+    pub deny: Paths,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskFixSetuid {
+    pub subject: PolicySubject,
+    pub allow: bool,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SocketBind {
+    pub subject: PolicySubject,
+    pub allow: Ports,
+    pub deny: Ports,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SocketConnect {
+    pub subject: PolicySubject,
+    pub allow: Addresses,
+    pub deny: Addresses,
 }
 
 #[cfg(test)]
@@ -192,7 +208,7 @@ mod test {
   deny: !paths
     - /root/s3cr3tdir
 - !file_open
-  subject: !process /usr/bin/myapp
+  subject: !binary /usr/bin/myapp
   allow: !paths
     - /etc/myapp
   deny: all
@@ -201,19 +217,19 @@ mod test {
         assert_eq!(policy.len(), 2);
         assert_eq!(
             policy[0],
-            Policy::FileOpen {
+            Policy::FileOpen(FileOpen {
                 subject: PolicySubject::All,
                 allow: Paths::All,
                 deny: Paths::Paths(vec![PathBuf::from("/root/s3cr3tdir")])
-            }
+            })
         );
         assert_eq!(
             policy[1],
-            Policy::FileOpen {
-                subject: PolicySubject::Process(PathBuf::from("/usr/bin/myapp")),
+            Policy::FileOpen(FileOpen {
+                subject: PolicySubject::Binary(PathBuf::from("/usr/bin/myapp")),
                 allow: Paths::Paths(vec![PathBuf::from("/etc/myapp")]),
                 deny: Paths::All
-            }
+            })
         );
     }
 
@@ -224,24 +240,24 @@ mod test {
   subject: all  
   allow: false
 - !setuid
-  subject: !process /usr/bin/sudo
+  subject: !binary /usr/bin/sudo
   allow: true
 ";
         let policy = serde_yaml::from_str::<Vec<Policy>>(yaml).unwrap();
         assert_eq!(policy.len(), 2);
         assert_eq!(
             policy[0],
-            Policy::SetUid {
+            Policy::TaskFixSetuid(TaskFixSetuid {
                 subject: PolicySubject::All,
                 allow: false
-            }
+            })
         );
         assert_eq!(
             policy[1],
-            Policy::SetUid {
-                subject: PolicySubject::Process(PathBuf::from("/usr/bin/sudo")),
+            Policy::TaskFixSetuid(TaskFixSetuid {
+                subject: PolicySubject::Binary(PathBuf::from("/usr/bin/sudo")),
                 allow: true
-            }
+            })
         );
     }
 
@@ -249,13 +265,13 @@ mod test {
     fn test_socket_bind() {
         let yaml = "
 - !socket_bind
-  subject: !process /usr/bin/nginx
+  subject: !binary /usr/bin/nginx
   allow: !ports
     - 80
     - 443
   deny: all
 - !socket_bind
-  subject: !process /usr/bin/python
+  subject: !binary /usr/bin/python
   allow: !ports
     - 8080
   deny: all
@@ -264,19 +280,19 @@ mod test {
         assert_eq!(policy.len(), 2);
         assert_eq!(
             policy[0],
-            Policy::SocketBind {
-                subject: PolicySubject::Process(PathBuf::from("/usr/bin/nginx")),
+            Policy::SocketBind(SocketBind {
+                subject: PolicySubject::Binary(PathBuf::from("/usr/bin/nginx")),
                 allow: Ports::Ports(vec![80, 443]),
                 deny: Ports::All
-            }
+            })
         );
         assert_eq!(
             policy[1],
-            Policy::SocketBind {
-                subject: PolicySubject::Process(PathBuf::from("/usr/bin/python")),
+            Policy::SocketBind(SocketBind {
+                subject: PolicySubject::Binary(PathBuf::from("/usr/bin/python")),
                 allow: Ports::Ports(vec![8080]),
                 deny: Ports::All
-            }
+            })
         );
     }
 
@@ -284,13 +300,13 @@ mod test {
     fn test_socket_connect() {
         let yaml = "
 - !socket_connect
-  subject: !process /usr/bin/nginx
+  subject: !binary /usr/bin/nginx
   allow: !addresses
     - 10.0.0.1
     - 2001:db8:3333:4444:5555:6666:7777:8888
   deny: all
 - !socket_connect
-  subject: !process /usr/bin/tomcat
+  subject: !binary /usr/bin/tomcat
   allow: all
   deny: !addresses
     - 172.16.0.1
@@ -300,8 +316,8 @@ mod test {
         assert_eq!(policy.len(), 2);
         assert_eq!(
             policy[0],
-            Policy::SocketConnect {
-                subject: PolicySubject::Process(PathBuf::from("/usr/bin/nginx")),
+            Policy::SocketConnect(SocketConnect {
+                subject: PolicySubject::Binary(PathBuf::from("/usr/bin/nginx")),
                 allow: Addresses::Addresses(vec![
                     IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)),
                     IpAddr::V6(Ipv6Addr::new(
@@ -309,12 +325,12 @@ mod test {
                     ))
                 ]),
                 deny: Addresses::All
-            }
+            })
         );
         assert_eq!(
             policy[1],
-            Policy::SocketConnect {
-                subject: PolicySubject::Process(PathBuf::from("/usr/bin/tomcat")),
+            Policy::SocketConnect(SocketConnect {
+                subject: PolicySubject::Binary(PathBuf::from("/usr/bin/tomcat")),
                 allow: Addresses::All,
                 deny: Addresses::Addresses(vec![
                     IpAddr::V4(Ipv4Addr::new(172, 16, 0, 1)),
@@ -322,7 +338,7 @@ mod test {
                         0x2001, 0x0db8, 0x3333, 0x4444, 0xCCCC, 0xDDDD, 0xEEEE, 0xFFFF
                     )),
                 ]),
-            }
+            })
         );
     }
 }

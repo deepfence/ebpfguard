@@ -1,11 +1,15 @@
 use aya_bpf::{
     cty::c_long, helpers::bpf_probe_read_kernel, maps::HashMap, programs::LsmContext, BpfContext,
 };
-use guardity_common::{alerts, IpAddrs, Ipv4Addrs, Ipv6Addrs};
+use guardity_common::{
+    alerts,
+    consts::INODE_WILDCARD,
+    policy::{IpAddrs, Ipv4Addrs, Ipv6Addrs},
+};
 
 use crate::{
     binprm::current_binprm_inode,
-    consts::{AF_INET, AF_INET6, INODE_WILDCARD},
+    consts::{AF_INET, AF_INET6},
     maps::{
         ALERT_SOCKET_CONNECT, ALLOWED_SOCKET_CONNECT_V4, ALLOWED_SOCKET_CONNECT_V6,
         DENIED_SOCKET_CONNECT_V4, DENIED_SOCKET_CONNECT_V6,
