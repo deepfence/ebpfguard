@@ -8,7 +8,7 @@
   subject: all
   allow: all
   deny: !paths
-    - /home/vadorovsky/forbidden
+    - /tmp/test
 - !socket_bind
   subject: all
   allow: !ports
