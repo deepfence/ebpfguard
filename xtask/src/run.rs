@@ -19,18 +19,20 @@ pub struct Options {
     /// Arguments to pass to your application
     #[clap(name = "args", last = true)]
     pub run_args: Vec<String>,
+    #[clap(long)]
+    pub example: String,
 }
 
-/// Build the project
+/// Build the examples
 fn build(opts: &Options) -> Result<(), anyhow::Error> {
-    let mut args = vec!["build"];
+    let mut args = vec!["build", "--example", &opts.example];
     if opts.release {
         args.push("--release")
     }
     let status = Command::new("cargo")
         .args(&args)
         .status()
-        .expect("failed to build userspace");
+        .expect("failed to build user space examples");
     assert!(status.success());
     Ok(())
 }
@@ -47,7 +49,8 @@ pub fn run(opts: Options) -> Result<(), anyhow::Error> {
 
     // profile we are building (release or debug)
     let profile = if opts.release { "release" } else { "debug" };
-    let bin_path = format!("target/{profile}/guardity");
+    let example = opts.example;
+    let bin_path = format!("target/{profile}/examples/{example}");
 
     // arguments to pass to the application
     let mut run_args: Vec<_> = opts.run_args.iter().map(String::as_str).collect();

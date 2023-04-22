@@ -1,5 +1,10 @@
 [workspace]
-members = ["guardctl", "guardity", "guardity-common", "xtask"]
+members = [
+    "guardity",
+    "guardity-common",
+    "xtask",
+    "examples/*",
+]
 
 [patch.crates-io]
 aya = { git = "https://github.com/aya-rs/aya", branch = "main" }
