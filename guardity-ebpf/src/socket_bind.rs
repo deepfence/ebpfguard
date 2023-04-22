@@ -1,11 +1,11 @@
 use core::cmp;
 
 use aya_bpf::{cty::c_long, programs::LsmContext, BpfContext};
-use guardity_common::{alerts, MAX_PORTS};
+use guardity_common::{alerts, consts::INODE_WILDCARD, policy::MAX_PORTS};
 
 use crate::{
     binprm::current_binprm_inode,
-    consts::{AF_INET, INODE_WILDCARD},
+    consts::AF_INET,
     maps::{ALERT_SOCKET_BIND, ALLOWED_SOCKET_BIND, DENIED_SOCKET_BIND},
     vmlinux::{sockaddr, sockaddr_in},
 };

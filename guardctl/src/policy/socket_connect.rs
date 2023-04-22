@@ -1,133 +1,31 @@
-use std::{
-    collections::HashSet,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr},
-};
-
-use aya::{maps::HashMap, Bpf};
 use cli_table::{Cell, Style, Table, TableStruct};
-use guardity::policy::engine::INODE_WILDCARD;
-use guardity_common::IpAddrs;
+use guardity::{policy::Addresses, PolicyManager};
 
-enum Addresses {
-    All,
-    Addresses(Vec<IpAddr>),
-}
-
-pub(crate) fn list_socket_connect(bpf: &mut Bpf) -> anyhow::Result<TableStruct> {
+pub(crate) async fn list_socket_connect(
+    policy_manager: &mut PolicyManager,
+) -> anyhow::Result<TableStruct> {
     let mut table = Vec::new();
 
-    let allowed_socket_connect_v4: HashMap<_, u64, guardity_common::Ipv4Addrs> =
-        bpf.map("ALLOWED_SOCKET_CONNECT_V4").unwrap().try_into()?;
-    let denied_socket_connect_v4: HashMap<_, u64, guardity_common::Ipv4Addrs> =
-        bpf.map("DENIED_SOCKET_CONNECT_V4").unwrap().try_into()?;
-    let allowed_socket_connect_v6: HashMap<_, u64, guardity_common::Ipv6Addrs> =
-        bpf.map("ALLOWED_SOCKET_CONNECT_V6").unwrap().try_into()?;
-    let denied_socket_connect_v6: HashMap<_, u64, guardity_common::Ipv6Addrs> =
-        bpf.map("DENIED_SOCKET_CONNECT_V6").unwrap().try_into()?;
+    let socket_connect = policy_manager.manage_socket_connect()?;
 
-    let mut subjects = HashSet::new();
-    for key in allowed_socket_connect_v4.keys() {
-        let key = key?;
-        subjects.insert(key);
-    }
-    for key in denied_socket_connect_v4.keys() {
-        let key = key?;
-        subjects.insert(key);
-    }
-    for key in allowed_socket_connect_v6.keys() {
-        let key = key?;
-        subjects.insert(key);
-    }
-    for key in denied_socket_connect_v6.keys() {
-        let key = key?;
-        subjects.insert(key);
-    }
-
-    for subject in subjects {
-        let mut allowed = match allowed_socket_connect_v4.get(&subject, 0) {
-            Ok(allowed) => {
-                if allowed.all() {
-                    Addresses::All
-                } else {
-                    Addresses::Addresses(
-                        allowed
-                            .addrs
-                            .iter()
-                            .map(|a| IpAddr::V4(Ipv4Addr::from(*a)))
-                            .collect(),
-                    )
-                }
-            }
-            Err(aya::maps::MapError::KeyNotFound) => Addresses::Addresses(vec![]),
-            Err(e) => return Err(e.into()),
-        };
-        if let Addresses::Addresses(addrs) = &mut allowed {
-            match allowed_socket_connect_v6.get(&subject, 0) {
-                Ok(allowed) => {
-                    if allowed.all() {
-                        anyhow::bail!("Inconsistent policies: allowed all IPv6 addresses, but specified IPv4 addresses")
-                    } else {
-                        addrs.extend(allowed.addrs.iter().map(|a| IpAddr::V6(Ipv6Addr::from(*a))));
-                    }
-                }
-                Err(aya::maps::MapError::KeyNotFound) => {}
-                Err(e) => return Err(e.into()),
-            }
-        }
-
-        let mut denied = match denied_socket_connect_v4.get(&subject, 0) {
-            Ok(denied) => {
-                if denied.all() {
-                    Addresses::All
-                } else {
-                    Addresses::Addresses(
-                        denied
-                            .addrs
-                            .iter()
-                            .map(|a| IpAddr::V4(Ipv4Addr::from(*a)))
-                            .collect(),
-                    )
-                }
-            }
-            Err(aya::maps::MapError::KeyNotFound) => Addresses::Addresses(vec![]),
-            Err(e) => return Err(e.into()),
-        };
-        if let Addresses::Addresses(addrs) = &mut denied {
-            match denied_socket_connect_v6.get(&subject, 0) {
-                Ok(denied) => {
-                    if denied.all() {
-                        anyhow::bail!("Inconsistent policies: denied all IPv6 addresses, but specified IPv4 addresses")
-                    } else {
-                        addrs.extend(denied.addrs.iter().map(|a| IpAddr::V6(Ipv6Addr::from(*a))));
-                    }
-                }
-                Err(aya::maps::MapError::KeyNotFound) => {}
-                Err(e) => return Err(e.into()),
-            }
-        }
-
-        let allowed = match allowed {
+    for policy in socket_connect.list_policies().await? {
+        let allow = match policy.allow {
             Addresses::All => "all".to_owned(),
-            Addresses::Addresses(addrs) => addrs
+            Addresses::Addresses(addresses) => addresses
                 .iter()
                 .map(|a| a.to_string())
                 .collect::<Vec<_>>()
                 .join("\n"),
         };
-        let denied = match denied {
+        let deny = match policy.deny {
             Addresses::All => "all".to_owned(),
-            Addresses::Addresses(addrs) => addrs
+            Addresses::Addresses(addresses) => addresses
                 .iter()
                 .map(|a| a.to_string())
                 .collect::<Vec<_>>()
                 .join("\n"),
         };
-
-        if subject == INODE_WILDCARD {
-            table.push(vec!["all".to_owned(), allowed, denied]);
-        } else {
-            table.push(vec![subject.to_string(), allowed, denied]);
-        }
+        table.push(vec![policy.subject.to_string(), allow, deny]);
     }
 
     let table = table.table().title(vec![

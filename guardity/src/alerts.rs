@@ -20,7 +20,7 @@ impl From<alerts::BprmCheckSecurity> for BprmCheckSecurity {
     fn from(alert: alerts::BprmCheckSecurity) -> Self {
         Self {
             pid: alert.pid,
-            subject: PolicySubject::Process(PathBuf::from(alert.binprm_inode.to_string())),
+            subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
         }
     }
 }
@@ -38,14 +38,14 @@ impl From<alerts::FileOpen> for FileOpen {
     fn from(alert: alerts::FileOpen) -> Self {
         Self {
             pid: alert.pid,
-            subject: PolicySubject::Process(PathBuf::from(alert.binprm_inode.to_string())),
+            subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
             path: PathBuf::from(alert.inode.to_string()),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct TaskFixSetUid {
+pub struct TaskFixSetuid {
     pub pid: u32,
     pub subject: PolicySubject,
     pub old_uid: u32,
@@ -54,13 +54,13 @@ pub struct TaskFixSetUid {
     pub new_gid: u32,
 }
 
-impl Alert for TaskFixSetUid {}
+impl Alert for TaskFixSetuid {}
 
-impl From<alerts::TaskFixSetuid> for TaskFixSetUid {
+impl From<alerts::TaskFixSetuid> for TaskFixSetuid {
     fn from(alert: alerts::TaskFixSetuid) -> Self {
         Self {
             pid: alert.pid,
-            subject: PolicySubject::Process(PathBuf::from(alert.binprm_inode.to_string())),
+            subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
             old_uid: alert.old_uid,
             old_gid: alert.old_gid,
             new_uid: alert.new_uid,
@@ -82,7 +82,7 @@ impl From<alerts::SocketBind> for SocketBind {
     fn from(alert: alerts::SocketBind) -> Self {
         Self {
             pid: alert.pid,
-            subject: PolicySubject::Process(PathBuf::from(alert.binprm_inode.to_string())),
+            subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
             port: alert.port,
         }
     }
@@ -106,7 +106,7 @@ impl From<alerts::SocketConnect> for SocketConnect {
         };
         Self {
             pid: alert.pid,
-            subject: PolicySubject::Process(PathBuf::from(alert.binprm_inode.to_string())),
+            subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
             addr,
         }
     }

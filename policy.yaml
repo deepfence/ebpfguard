@@ -2,7 +2,7 @@
   subject: all
   allow: false
 - !setuid
-  subject: !process /usr/bin/sudo
+  subject: !binary /usr/bin/sudo
   allow: true
 - !file_open
   subject: all

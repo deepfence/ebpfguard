@@ -27,17 +27,17 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let mut policy_manager = PolicyManager::new(bpf_path)?;
 
-    policy_manager.attach_bprm_check_security()?;
-    policy_manager.attach_file_open()?;
-    policy_manager.attach_task_fix_setuid()?;
-    policy_manager.attach_socket_bind()?;
-    policy_manager.attach_socket_connect()?;
+    let mut bprm_check_security = policy_manager.attach_bprm_check_security()?;
+    let mut file_open = policy_manager.attach_file_open()?;
+    let mut task_fix_setuid = policy_manager.attach_task_fix_setuid()?;
+    let mut socket_bind = policy_manager.attach_socket_bind()?;
+    let mut socket_connect = policy_manager.attach_socket_connect()?;
 
-    let mut rx_bprm_check_security = policy_manager.bprm_check_security()?.alerts().await?;
-    let mut rx_file_open = policy_manager.file_open()?.alerts().await?;
-    let mut rx_task_fix_setuid = policy_manager.task_fix_setuid()?.alerts().await?;
-    let mut rx_socket_bind = policy_manager.socket_bind()?.alerts().await?;
-    let mut rx_socket_connect = policy_manager.socket_connect()?.alerts().await?;
+    let mut rx_bprm_check_security = bprm_check_security.alerts().await?;
+    let mut rx_file_open = file_open.alerts().await?;
+    let mut rx_task_fix_setuid = task_fix_setuid.alerts().await?;
+    let mut rx_socket_bind = socket_bind.alerts().await?;
+    let mut rx_socket_connect = socket_connect.alerts().await?;
 
     info!("Waiting for Ctrl-C...");
 

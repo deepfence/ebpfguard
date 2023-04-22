@@ -1,66 +1,31 @@
-use std::collections::HashSet;
-
-use aya::{
-    maps::{HashMap, MapError},
-    Bpf,
-};
 use cli_table::{Cell, Style, Table, TableStruct};
-use guardity::policy::{engine::INODE_WILDCARD, Paths};
+use guardity::{policy::Paths, PolicyManager};
 
-pub(crate) fn list_file_open(bpf: &mut Bpf) -> anyhow::Result<TableStruct> {
+pub(crate) async fn list_file_open(
+    policy_manager: &mut PolicyManager,
+) -> anyhow::Result<TableStruct> {
     let mut table = Vec::new();
 
-    let allowed_file_open: HashMap<_, u64, guardity_common::Paths> =
-        bpf.map("ALLOWED_FILE_OPEN").unwrap().try_into()?;
-    let denied_file_open: HashMap<_, u64, guardity_common::Paths> =
-        bpf.map("DENIED_FILE_OPEN").unwrap().try_into()?;
+    let file_open = policy_manager.manage_file_open()?;
 
-    let mut subjects = HashSet::new();
-    for key in allowed_file_open.keys() {
-        let key = key?;
-        subjects.insert(key);
-    }
-    for key in denied_file_open.keys() {
-        let key = key?;
-        subjects.insert(key);
-    }
-
-    for subject in subjects {
-        let allowed = match allowed_file_open.get(&subject, 0) {
-            Ok(allowed) => {
-                let allowed = allowed.into();
-                match allowed {
-                    Paths::All => "all".to_owned(),
-                    Paths::Paths(paths) => paths
-                        .iter()
-                        .map(|p| p.to_string_lossy().to_string())
-                        .collect::<Vec<_>>()
-                        .join("\n"),
-                }
-            }
-            Err(MapError::KeyNotFound) => "-".to_owned(),
-            Err(e) => return Err(e.into()),
+    for policy in file_open.list_policies().await? {
+        let allow = match policy.allow {
+            Paths::All => "all".to_owned(),
+            Paths::Paths(paths) => paths
+                .iter()
+                .map(|p| p.to_string_lossy().to_string())
+                .collect::<Vec<_>>()
+                .join("\n"),
         };
-        let denied = match denied_file_open.get(&subject, 0) {
-            Ok(denied) => {
-                let denied = denied.into();
-                match denied {
-                    Paths::All => "all".to_owned(),
-                    Paths::Paths(paths) => paths
-                        .iter()
-                        .map(|p| p.to_string_lossy().to_string())
-                        .collect::<Vec<_>>()
-                        .join("\n"),
-                }
-            }
-            Err(MapError::KeyNotFound) => "-".to_owned(),
-            Err(e) => return Err(e.into()),
+        let deny = match policy.deny {
+            Paths::All => "all".to_owned(),
+            Paths::Paths(paths) => paths
+                .iter()
+                .map(|p| p.to_string_lossy().to_string())
+                .collect::<Vec<_>>()
+                .join("\n"),
         };
-        if subject == INODE_WILDCARD {
-            table.push(vec!["all".to_string(), allowed, denied]);
-        } else {
-            table.push(vec![subject.to_string(), allowed, denied]);
-        }
+        table.push(vec![policy.subject.to_string(), allow, deny]);
     }
 
     let table = table.table().title(vec![

@@ -1,10 +1,9 @@
 use aya_bpf::{cty::c_long, programs::LsmContext, BpfContext};
-use guardity_common::alerts;
+use guardity_common::{alerts, consts::INODE_WILDCARD};
 
 use crate::{
     binprm::current_binprm_inode,
-    consts::INODE_WILDCARD,
-    maps::{ALERT_SETUID, ALLOWED_SETUID, DENIED_SETUID},
+    maps::{ALERT_TASK_FIX_SETUID, ALLOWED_TASK_FIX_SETUID, DENIED_TASK_FIX_SETUID},
     vmlinux::cred,
 };
 
@@ -38,9 +37,9 @@ pub fn task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
 
     let binprm_inode = current_binprm_inode();
 
-    if unsafe { ALLOWED_SETUID.get(&INODE_WILDCARD) }.is_some() {
-        if unsafe { DENIED_SETUID.get(&binprm_inode).is_some() } {
-            ALERT_SETUID.output(
+    if unsafe { ALLOWED_TASK_FIX_SETUID.get(&INODE_WILDCARD) }.is_some() {
+        if unsafe { DENIED_TASK_FIX_SETUID.get(&binprm_inode).is_some() } {
+            ALERT_TASK_FIX_SETUID.output(
                 &ctx,
                 &alerts::TaskFixSetuid::new(
                     ctx.pid(),
@@ -57,11 +56,11 @@ pub fn task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
         return Ok(0);
     }
 
-    if unsafe { DENIED_SETUID.get(&INODE_WILDCARD) }.is_some() {
-        if unsafe { ALLOWED_SETUID.get(&binprm_inode).is_some() } {
+    if unsafe { DENIED_TASK_FIX_SETUID.get(&INODE_WILDCARD) }.is_some() {
+        if unsafe { ALLOWED_TASK_FIX_SETUID.get(&binprm_inode).is_some() } {
             return Ok(0);
         }
-        ALERT_SETUID.output(
+        ALERT_TASK_FIX_SETUID.output(
             &ctx,
             &alerts::TaskFixSetuid::new(
                 ctx.pid(),

@@ -1,30 +1,21 @@
-use std::{fmt::Debug, marker::PhantomData, path::Path};
+use std::path::Path;
 
 use aya::{
     include_bytes_aligned,
-    maps::{AsyncPerfEventArray, MapData},
     programs::{lsm::LsmLink, Lsm},
-    util::online_cpus,
     Bpf, BpfLoader, Btf,
 };
-use bytes::BytesMut;
-use guardity_common::alerts as ebpf_alerts;
-use tokio::{
-    sync::mpsc::{self, Receiver},
-    task,
-};
+use hooks::{All, BprmCheckSecurity, FileOpen, SocketBind, SocketConnect, TaskFixSetuid};
+use policy::inode::InodeSubjectMap;
 
 pub mod alerts;
+pub mod error;
 pub mod fs;
+pub mod hooks;
 pub mod policy;
 
 pub struct PolicyManager {
     bpf: Bpf,
-    bprm_check_security: Option<BprmCheckSecurityHook>,
-    file_open: Option<FileOpenHook>,
-    task_fix_setuid: Option<TaskFixSetuidHook>,
-    socket_bind: Option<SocketBindHook>,
-    socket_connect: Option<SocketConnectHook>,
 }
 
 impl PolicyManager {
@@ -42,173 +33,197 @@ impl PolicyManager {
                 "../../target/bpfel-unknown-none/release/guardity"
             ))?;
 
-        Ok(Self {
-            bpf,
-            bprm_check_security: None,
-            file_open: None,
-            task_fix_setuid: None,
-            socket_bind: None,
-            socket_connect: None,
+        Ok(Self { bpf })
+    }
+
+    pub fn attach_all(&mut self) -> anyhow::Result<All> {
+        let bprm_check_security = self.attach_bprm_check_security()?;
+        let file_open = self.attach_file_open()?;
+        let task_fix_setuid = self.attach_task_fix_setuid()?;
+        let socket_bind = self.attach_socket_bind()?;
+        let socket_connect = self.attach_socket_connect()?;
+
+        Ok(All {
+            bprm_check_security,
+            file_open,
+            task_fix_setuid,
+            socket_bind,
+            socket_connect,
         })
     }
 
-    pub fn attach_bprm_check_security(&mut self) -> anyhow::Result<()> {
-        let link = attach_program(&mut self.bpf, "bprm_check_security")?;
-        let perf_array = perf_array(&mut self.bpf, "ALERT_BPRM_CHECK_SECURITY")?;
-        let bprm_check_security = Hook::new(link, perf_array)?;
-        self.bprm_check_security = Some(bprm_check_security);
+    pub fn manage_all(&mut self) -> anyhow::Result<All> {
+        let bprm_check_security = self.manage_bprm_check_security()?;
+        let file_open = self.manage_file_open()?;
+        let task_fix_setuid = self.manage_task_fix_setuid()?;
+        let socket_bind = self.manage_socket_bind()?;
+        let socket_connect = self.manage_socket_connect()?;
 
-        Ok(())
+        Ok(All {
+            bprm_check_security,
+            file_open,
+            task_fix_setuid,
+            socket_bind,
+            socket_connect,
+        })
     }
 
-    pub fn bprm_check_security(&mut self) -> anyhow::Result<&mut BprmCheckSecurityHook> {
-        match self.bprm_check_security {
-            Some(ref mut bprm_check_security) => Ok(bprm_check_security),
-            None => Err(anyhow::anyhow!("bprm_check_security is not attached")),
-        }
+    pub fn attach_bprm_check_security(&mut self) -> anyhow::Result<BprmCheckSecurity> {
+        let mut bprm_check_security = self.manage_bprm_check_security()?;
+        let program_link = self.attach_program("bprm_check_security")?;
+        bprm_check_security.program_link = Some(program_link);
+
+        Ok(bprm_check_security)
     }
 
-    pub fn attach_file_open(&mut self) -> anyhow::Result<()> {
-        let link = attach_program(&mut self.bpf, "file_open")?;
-        let perf_array = perf_array(&mut self.bpf, "ALERT_FILE_OPEN")?;
-        let file_open = Hook::new(link, perf_array)?;
-        self.file_open = Some(file_open);
+    pub fn manage_bprm_check_security(&mut self) -> anyhow::Result<BprmCheckSecurity> {
+        let perf_array = self
+            .bpf
+            .take_map("ALERT_BPRM_CHECK_SECURITY")
+            .unwrap()
+            .try_into()?;
 
-        Ok(())
-    }
-
-    pub fn file_open(&mut self) -> anyhow::Result<&mut FileOpenHook> {
-        match self.file_open {
-            Some(ref mut file_open) => Ok(file_open),
-            None => Err(anyhow::anyhow!("file_open is not attached")),
-        }
-    }
-
-    pub fn attach_task_fix_setuid(&mut self) -> anyhow::Result<()> {
-        let link = attach_program(&mut self.bpf, "task_fix_setuid")?;
-        let perf_array = perf_array(&mut self.bpf, "ALERT_SETUID")?;
-        let setuid = Hook::new(link, perf_array)?;
-        self.task_fix_setuid = Some(setuid);
-
-        Ok(())
-    }
-
-    pub fn task_fix_setuid(&mut self) -> anyhow::Result<&mut TaskFixSetuidHook> {
-        match self.task_fix_setuid {
-            Some(ref mut setuid) => Ok(setuid),
-            None => Err(anyhow::anyhow!("setuid is not attached")),
-        }
-    }
-
-    pub fn attach_socket_bind(&mut self) -> anyhow::Result<()> {
-        let link = attach_program(&mut self.bpf, "socket_bind")?;
-        let perf_array = perf_array(&mut self.bpf, "ALERT_SOCKET_BIND")?;
-        let socket_bind = Hook::new(link, perf_array)?;
-        self.socket_bind = Some(socket_bind);
-
-        Ok(())
-    }
-
-    pub fn socket_bind(&mut self) -> anyhow::Result<&mut SocketBindHook> {
-        match self.socket_bind {
-            Some(ref mut socket_bind) => Ok(socket_bind),
-            None => Err(anyhow::anyhow!("socket_bind is not attached")),
-        }
-    }
-
-    pub fn attach_socket_connect(&mut self) -> anyhow::Result<()> {
-        let link = attach_program(&mut self.bpf, "socket_connect")?;
-        let perf_array = perf_array(&mut self.bpf, "ALERT_SOCKET_CONNECT")?;
-        let socket_connect = Hook::new(link, perf_array)?;
-        self.socket_connect = Some(socket_connect);
-
-        Ok(())
-    }
-
-    pub fn socket_connect(&mut self) -> anyhow::Result<&mut SocketConnectHook> {
-        match self.socket_connect {
-            Some(ref mut socket_connect) => Ok(socket_connect),
-            None => Err(anyhow::anyhow!("socket_connect is not attached")),
-        }
-    }
-}
-
-fn attach_program(bpf: &mut Bpf, name: &str) -> anyhow::Result<LsmLink> {
-    let btf = Btf::from_sys_fs()?;
-    let program: &mut Lsm = bpf.program_mut(name).unwrap().try_into()?;
-    program.load(name, &btf)?;
-    let link_id = program.attach()?;
-    let link = program.take_link(link_id)?;
-
-    Ok(link)
-}
-
-fn perf_array(bpf: &mut Bpf, name: &str) -> anyhow::Result<AsyncPerfEventArray<MapData>> {
-    let perf_array = bpf.take_map(name).unwrap().try_into()?;
-    Ok(perf_array)
-}
-
-pub struct Hook<T, U>
-where
-    T: ebpf_alerts::Alert,
-    U: alerts::Alert,
-{
-    #[allow(dead_code)]
-    program_link: LsmLink,
-    perf_array: AsyncPerfEventArray<MapData>,
-    phantom_t: PhantomData<T>,
-    phantom_u: PhantomData<U>,
-}
-
-impl<T, U> Hook<T, U>
-where
-    T: ebpf_alerts::Alert,
-    U: alerts::Alert + Debug + Send + From<T> + 'static,
-{
-    fn new(
-        program_link: LsmLink,
-        perf_array: AsyncPerfEventArray<MapData>,
-    ) -> anyhow::Result<Self> {
-        Ok(Self {
-            program_link,
+        Ok(BprmCheckSecurity {
+            program_link: None,
             perf_array,
-            phantom_t: PhantomData,
-            phantom_u: PhantomData,
         })
     }
 
-    pub async fn alerts(&mut self) -> anyhow::Result<Receiver<U>> {
-        let (tx, rx) = mpsc::channel(32);
+    pub fn attach_file_open(&mut self) -> anyhow::Result<FileOpen> {
+        let mut file_open = self.manage_file_open()?;
+        let program_link = self.attach_program("file_open")?;
+        file_open.program_link = Some(program_link);
 
-        let cpus = online_cpus()?;
-        for cpu_id in cpus {
-            let tx = tx.clone();
-            let mut buf = self.perf_array.open(cpu_id, None)?;
+        Ok(file_open)
+    }
 
-            task::spawn(async move {
-                let mut buffers = (0..10)
-                    .map(|_| BytesMut::with_capacity(1024))
-                    .collect::<Vec<_>>();
-                loop {
-                    let events = buf.read_events(&mut buffers).await.unwrap();
-                    for buf in buffers.iter_mut().take(events.read) {
-                        let alert: U = {
-                            let ptr = buf.as_ptr() as *const T;
-                            let alert = unsafe { ptr.read_unaligned() };
-                            alert.into()
-                        };
-                        tx.send(alert).await.unwrap();
-                    }
-                }
-            });
-        }
+    pub fn manage_file_open(&mut self) -> anyhow::Result<FileOpen> {
+        let allowed_map = self.bpf.take_map("ALLOWED_FILE_OPEN").unwrap().try_into()?;
+        let denied_map = self.bpf.take_map("DENIED_FILE_OPEN").unwrap().try_into()?;
+        let perf_array = self.bpf.take_map("ALERT_FILE_OPEN").unwrap().try_into()?;
 
-        Ok(rx)
+        Ok(FileOpen {
+            program_link: None,
+            allowed_map,
+            denied_map,
+            perf_array,
+        })
+    }
+
+    pub fn attach_task_fix_setuid(&mut self) -> anyhow::Result<TaskFixSetuid> {
+        let mut task_fix_setuid = self.manage_task_fix_setuid()?;
+        let program_link = self.attach_program("task_fix_setuid")?;
+        task_fix_setuid.program_link = Some(program_link);
+
+        Ok(task_fix_setuid)
+    }
+
+    pub fn manage_task_fix_setuid(&mut self) -> anyhow::Result<TaskFixSetuid> {
+        let allowed_map = self
+            .bpf
+            .take_map("ALLOWED_TASK_FIX_SETUID")
+            .unwrap()
+            .try_into()?;
+        let denied_map = self
+            .bpf
+            .take_map("DENIED_TASK_FIX_SETUID")
+            .unwrap()
+            .try_into()?;
+        let perf_array = self
+            .bpf
+            .take_map("ALERT_TASK_FIX_SETUID")
+            .unwrap()
+            .try_into()?;
+
+        Ok(TaskFixSetuid {
+            program_link: None,
+            allowed_map,
+            denied_map,
+            perf_array,
+        })
+    }
+
+    pub fn attach_socket_bind(&mut self) -> anyhow::Result<SocketBind> {
+        let mut socket_bind = self.manage_socket_bind()?;
+        let program_link = self.attach_program("socket_bind")?;
+        socket_bind.program_link = Some(program_link);
+
+        Ok(socket_bind)
+    }
+
+    pub fn manage_socket_bind(&mut self) -> anyhow::Result<SocketBind> {
+        let allowed_map = self
+            .bpf
+            .take_map("ALLOWED_SOCKET_BIND")
+            .unwrap()
+            .try_into()?;
+        let denied_map = self
+            .bpf
+            .take_map("DENIED_SOCKET_BIND")
+            .unwrap()
+            .try_into()?;
+        let perf_array = self.bpf.take_map("ALERT_SOCKET_BIND").unwrap().try_into()?;
+
+        Ok(SocketBind {
+            program_link: None,
+            allowed_map,
+            denied_map,
+            perf_array,
+        })
+    }
+
+    pub fn attach_socket_connect(&mut self) -> anyhow::Result<SocketConnect> {
+        let mut socket_connect = self.manage_socket_connect()?;
+        let program_link = self.attach_program("socket_connect")?;
+        socket_connect.program_link = Some(program_link);
+
+        Ok(socket_connect)
+    }
+
+    pub fn manage_socket_connect(&mut self) -> anyhow::Result<SocketConnect> {
+        let allowed_map_v4 = self
+            .bpf
+            .take_map("ALLOWED_SOCKET_CONNECT_V4")
+            .unwrap()
+            .try_into()?;
+        let denied_map_v4 = self
+            .bpf
+            .take_map("DENIED_SOCKET_CONNECT_V4")
+            .unwrap()
+            .try_into()?;
+        let allowed_map_v6 = self
+            .bpf
+            .take_map("ALLOWED_SOCKET_CONNECT_V6")
+            .unwrap()
+            .try_into()?;
+        let denied_map_v6 = self
+            .bpf
+            .take_map("DENIED_SOCKET_CONNECT_V6")
+            .unwrap()
+            .try_into()?;
+        let perf_array = self
+            .bpf
+            .take_map("ALERT_SOCKET_CONNECT")
+            .unwrap()
+            .try_into()?;
+
+        Ok(SocketConnect {
+            program_link: None,
+            allowed_map_v4,
+            denied_map_v4,
+            allowed_map_v6,
+            denied_map_v6,
+            perf_array,
+        })
+    }
+
+    fn attach_program(&mut self, name: &str) -> anyhow::Result<LsmLink> {
+        let btf = Btf::from_sys_fs()?;
+        let program: &mut Lsm = self.bpf.program_mut(name).unwrap().try_into()?;
+        program.load(name, &btf)?;
+        let link_id = program.attach()?;
+        let link = program.take_link(link_id)?;
+
+        Ok(link)
     }
 }
-
-pub type BprmCheckSecurityHook = Hook<ebpf_alerts::BprmCheckSecurity, alerts::BprmCheckSecurity>;
-pub type FileOpenHook = Hook<ebpf_alerts::FileOpen, alerts::FileOpen>;
-pub type TaskFixSetuidHook = Hook<ebpf_alerts::TaskFixSetuid, alerts::TaskFixSetUid>;
-pub type SocketBindHook = Hook<ebpf_alerts::SocketBind, alerts::SocketBind>;
-pub type SocketConnectHook = Hook<ebpf_alerts::SocketConnect, alerts::SocketConnect>;
