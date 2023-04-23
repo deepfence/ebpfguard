@@ -1,5 +1,5 @@
 pub const MAX_PATHS: usize = 4;
-pub const MAX_PORTS: usize = 1;
+pub const MAX_PORTS: usize = 4;
 pub const MAX_IPV4ADDRS: usize = 1;
 pub const MAX_IPV6ADDRS: usize = 1;
 
@@ -12,22 +12,22 @@ pub struct Paths {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Ports {
-    pub all: bool,
-    _padding1: [u8; 7],
-    pub len: usize,
     pub ports: [u16; MAX_PORTS],
-    _padding2: [u16; 3 * MAX_PORTS],
 }
 
 impl Ports {
-    pub fn new(all: bool, len: usize, ports: [u16; MAX_PORTS]) -> Self {
+    pub fn new(ports: [u16; MAX_PORTS]) -> Self {
+        Self { ports }
+    }
+
+    pub fn new_all() -> Self {
         Self {
-            all,
-            _padding1: [0; 7],
-            len,
-            ports,
-            _padding2: [0; 3 * MAX_PORTS],
+            ports: [0; MAX_PORTS],
         }
+    }
+
+    pub fn all(&self) -> bool {
+        self.ports[0] == 0
     }
 }
 

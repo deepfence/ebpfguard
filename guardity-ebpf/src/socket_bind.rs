@@ -1,6 +1,4 @@
-use core::cmp;
-
-use aya_bpf::{cty::c_long, programs::LsmContext, BpfContext};
+use aya_bpf::{programs::LsmContext, BpfContext};
 use guardity_common::{alerts, consts::INODE_WILDCARD, policy::MAX_PORTS};
 
 use crate::{
@@ -8,6 +6,7 @@ use crate::{
     consts::AF_INET,
     maps::{ALERT_SOCKET_BIND, ALLOWED_SOCKET_BIND, DENIED_SOCKET_BIND},
     vmlinux::{sockaddr, sockaddr_in},
+    Action,
 };
 
 /// Inspects the context of `socket_bind` LSM hook and decides whether to allow
@@ -31,90 +30,85 @@ use crate::{
 /// }
 /// ```
 #[inline(always)]
-pub fn socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
+pub fn socket_bind(ctx: LsmContext) -> Action {
     let sockaddr: *const sockaddr = unsafe { ctx.arg(1) };
 
     if unsafe { (*sockaddr).sa_family } != AF_INET {
-        return Ok(0);
+        return Action::Allow;
     }
 
     let sockaddr_in: *const sockaddr_in = sockaddr as *const sockaddr_in;
     let port = u16::from_be(unsafe { (*sockaddr_in).sin_port });
 
     if port == 0 {
-        return Ok(0);
+        return Action::Allow;
     }
 
     let binprm_inode = current_binprm_inode();
 
     if let Some(ports) = unsafe { ALLOWED_SOCKET_BIND.get(&INODE_WILDCARD) } {
-        if ports.all {
+        if ports.all() {
             if let Some(ports) = unsafe { DENIED_SOCKET_BIND.get(&INODE_WILDCARD) } {
-                if ports.all {
+                if ports.all() {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
                         &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
-                    return Ok(-1);
+                    return Action::Deny;
                 }
-                let len = cmp::min(ports.len, MAX_PORTS);
-                if ports.ports[..len].contains(&port) {
+                if ports.ports[..MAX_PORTS - 1].contains(&port) {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
                         &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
-                    return Ok(-1);
+                    return Action::Deny;
                 }
             }
 
             if let Some(ports) = unsafe { DENIED_SOCKET_BIND.get(&binprm_inode) } {
-                if ports.all {
+                if ports.all() {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
                         &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
-                    return Ok(-1);
+                    return Action::Deny;
                 }
-                let len = cmp::min(ports.len, MAX_PORTS);
-                if ports.ports[..len].contains(&port) {
+                if ports.ports[..MAX_PORTS - 1].contains(&port) {
                     ALERT_SOCKET_BIND.output(
                         &ctx,
                         &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
-                    return Ok(-1);
+                    return Action::Deny;
                 }
             }
         } else {
-            let len = cmp::min(ports.len, MAX_PORTS);
-            if ports.ports[..len].contains(&port) {
-                return Ok(0);
+            if ports.ports[..MAX_PORTS - 1].contains(&port) {
+                return Action::Allow;
             }
         }
     }
 
     if let Some(ports) = unsafe { DENIED_SOCKET_BIND.get(&INODE_WILDCARD) } {
-        if ports.all {
+        if ports.all() {
             if let Some(ports) = unsafe { ALLOWED_SOCKET_BIND.get(&INODE_WILDCARD) } {
-                if ports.all {
-                    return Ok(0);
+                if ports.all() {
+                    return Action::Allow;
                 }
-                let len = cmp::min(ports.len, MAX_PORTS);
-                if ports.ports[..len].contains(&port) {
-                    return Ok(0);
+                if ports.ports[..MAX_PORTS - 1].contains(&port) {
+                    return Action::Allow;
                 }
             }
 
             if let Some(ports) = unsafe { ALLOWED_SOCKET_BIND.get(&binprm_inode) } {
-                if ports.all {
-                    return Ok(0);
+                if ports.all() {
+                    return Action::Allow;
                 }
-                let len = cmp::min(ports.len, MAX_PORTS);
-                if ports.ports[..len].contains(&port) {
-                    return Ok(0);
+                if ports.ports[..MAX_PORTS - 1].contains(&port) {
+                    return Action::Allow;
                 }
             }
 
@@ -123,19 +117,18 @@ pub fn socket_bind(ctx: LsmContext) -> Result<i32, c_long> {
                 &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                 0,
             );
-            return Ok(-1);
+            return Action::Deny;
         } else {
-            let len = cmp::min(ports.len, MAX_PORTS);
-            if ports.ports[..len].contains(&port) {
+            if ports.ports[..MAX_PORTS - 1].contains(&port) {
                 ALERT_SOCKET_BIND.output(
                     &ctx,
                     &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                     0,
                 );
-                return Ok(-1);
+                return Action::Deny;
             }
         }
     }
 
-    Ok(0)
+    Action::Allow
 }
