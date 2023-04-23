@@ -91,13 +91,13 @@ pub enum Ports {
 impl Into<ebpf_policy::Ports> for Ports {
     fn into(self) -> ebpf_policy::Ports {
         match self {
-            Ports::All => ebpf_policy::Ports::new(true, 0, [0; ebpf_policy::MAX_PORTS]),
+            Ports::All => ebpf_policy::Ports::new_all(),
             Ports::Ports(ports) => {
                 let mut ebpf_ports = [0; ebpf_policy::MAX_PORTS];
                 for (i, port) in ports.iter().enumerate() {
                     ebpf_ports[i] = *port;
                 }
-                ebpf_policy::Ports::new(false, ports.len(), ebpf_ports)
+                ebpf_policy::Ports::new(ebpf_ports)
             }
         }
     }
@@ -105,10 +105,17 @@ impl Into<ebpf_policy::Ports> for Ports {
 
 impl From<ebpf_policy::Ports> for Ports {
     fn from(ports: ebpf_policy::Ports) -> Self {
-        if ports.all {
+        if ports.all() {
             Ports::All
         } else {
-            Ports::Ports(ports.ports[..ports.len].to_vec())
+            let mut ports_vec = Vec::new();
+            for port in ports.ports.iter() {
+                if *port == 0 {
+                    break;
+                }
+                ports_vec.push(*port);
+            }
+            Ports::Ports(ports_vec)
         }
     }
 }
