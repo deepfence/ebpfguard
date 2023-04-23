@@ -63,7 +63,7 @@
 //!
 //! Then run our example policy program with:
 //!
-//! ```
+//! ```bash
 //! $ RUST_LOG=info cargo xtask run --example file_open -- --path-to-deny /tmp/test
 //! ```
 //!
@@ -79,7 +79,7 @@
 //!
 //! The policy application should show logs like:
 //!
-//! ```
+//! ```bash
 //! [2023-04-22T20:51:01Z INFO  file_open] file_open: pid=3001 subject=980333 path=9632
 //! [2023-04-22T20:51:03Z INFO  file_open] file_open: pid=3010 subject=980298 path=9633
 //! ```
@@ -100,18 +100,10 @@
 //!
 //! You can apply policies from the
 //! [example YAML file](https://github.com/deepfence/guardity/blob/main/examples/cli/policy.yaml):
-//! 
+//!
 //! ```bash
 //! $ cargo xtask run --example cli -- policy add --path examples/cli/policy.yaml
 //! ```
-//!
-//! # License
-//!
-//! Guardity's userspace part is licensed under
-//! [Apache License, version 2.0](https://github.com/deepfence/guardity/blob/main/LICENSE).
-//!
-//! eBPF programs inside guardity-ebpf directory are licensed under
-//! [GNU General Public License, version 2](https://github.com/deepfence/guardity/blob/main/guardity-ebpf/LICENSE).
 
 use std::path::Path;
 
@@ -138,7 +130,7 @@ impl PolicyManager {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```no_run
     /// use guardity::PolicyManager;
     /// use std::path::Path;
     ///

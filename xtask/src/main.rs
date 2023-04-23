@@ -1,4 +1,5 @@
 mod build_ebpf;
+mod generate_readme;
 mod run;
 
 use std::process::exit;
@@ -14,16 +15,17 @@ pub struct Options {
 #[derive(Debug, Parser)]
 enum Command {
     BuildEbpf(build_ebpf::Options),
+    GenerateReadme(generate_readme::Options),
     Run(run::Options),
 }
 
 fn main() {
     let opts = Options::parse();
 
-    use Command::*;
     let ret = match opts.command {
-        BuildEbpf(opts) => build_ebpf::build_ebpf(opts),
-        Run(opts) => run::run(opts),
+        Command::BuildEbpf(opts) => build_ebpf::build_ebpf(opts),
+        Command::GenerateReadme(opts) => generate_readme::generate_readme(opts),
+        Command::Run(opts) => run::run(opts),
     };
 
     if let Err(e) = ret {

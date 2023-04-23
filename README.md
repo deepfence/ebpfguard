@@ -1,3 +1,5 @@
+[![Workflow Status](https://github.com/deepfence/guardity/workflows/build-test/badge.svg)](https://github.com/deepfence/guardity/actions?query=workflow)
+
 # guardity
 
 **Guardity** is a library for managing Linux security policies. It is based on
@@ -65,7 +67,7 @@ $ echo "foo" > /tmp/test/test
 
 Then run our example policy program with:
 
-```rust
+```bash
 $ RUST_LOG=info cargo xtask run --example file_open -- --path-to-deny /tmp/test
 ```
 
@@ -81,7 +83,7 @@ cat: /tmp/test/test: Operation not permitted
 
 The policy application should show logs like:
 
-```rust
+```bash
 [2023-04-22T20:51:01Z INFO  file_open] file_open: pid=3001 subject=980333 path=9632
 [2023-04-22T20:51:03Z INFO  file_open] file_open: pid=3010 subject=980298 path=9633
 ```
