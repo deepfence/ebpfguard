@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 anyhow = "1"
 aya-tool = { git = "https://github.com/aya-rs/aya", branch = "main" }
+cargo-readme = "3.2.0"
 clap = { version = "4.1", features = ["derive"] }
