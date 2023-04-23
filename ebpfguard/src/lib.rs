@@ -41,9 +41,12 @@
 //!
 //! * [`bprm_check_security`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L62)
 //! * [`file_open`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L620)
-//! * [`task_fix_setuid`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L709)
+//! * [`sb_mount`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L128)
+//! * [`sb_remount`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L147)
+//! * [`sb_umount`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L159)
 //! * [`socket_bind`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L904)
 //! * [`socket_connect`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L912)
+//! * [`task_fix_setuid`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L709)
 //!
 //! # Examples
 //!
@@ -84,6 +87,56 @@
 //! ```bash
 //! [2023-04-22T20:51:01Z INFO  file_open] file_open: pid=3001 subject=980333 path=9632
 //! [2023-04-22T20:51:03Z INFO  file_open] file_open: pid=3010 subject=980298 path=9633
+//! ```
+//! ### mount
+//!
+//! The [mount](https://github.com/deepfence/ebpfguard/tree/main/examples/file_open)
+//! example shows how to define a policy for `sb_mount`, `sb_remount` and
+//! `sb_umount` LSM hooks as Rust code. It denies the mount operations for all
+//! processes except for the optionally given one.
+//!
+//! To try it out, let's create two directories:
+//!
+//! ```bash
+//! $ mkdir /tmp/test1
+//! $ mkdir /tmp/test2
+//! ```
+//!
+//! Then run our example policy program, first without providing any binary to
+//! allow mount for (so it's denied for all processes):
+//!
+//! ```bash
+//! $ RUST_LOG=info cargo xtask run --example mount
+//! ```
+//!
+//! Let's try to bind mount the first directory to the second one. It should
+//! fail with the following error:
+//!
+//! ```bash
+//! sudo mount --bind /tmp/test1 /tmp/test2
+//! mount: /tmp/test2: permission denied.
+//!        dmesg(1) may have more information after failed mount system call.
+//! ```
+//!
+//! And the policy program should show a log like:
+//!
+//! ```bash
+//! [2023-04-23T21:02:58Z INFO  mount] sb_mount: pid=17363 subject=678150
+//! ```
+//!
+//! Now let's try to allow mount operations for the mount binary:
+//!
+//! ```bash
+//! $ RUST_LOG=info cargo xtask run --example mount -- --allow /usr/bin/mount
+//! ```
+//!
+//! And try to bind mount the first directory to the second one again. It should
+//! succeed this time:
+//!
+//! ```bash
+//! $ sudo mount --bind /tmp/test1 /tmp/test2
+//! $ mount | grep test
+//! tmpfs on /tmp/test2 type tmpfs (rw,nosuid,nodev,seclabel,nr_inodes=1048576,inode64)
 //! ```
 //!
 //! ### `task_fix_setuid`
@@ -164,7 +217,11 @@ pub mod hooks;
 pub mod policy;
 
 use error::EbpfguardError;
-use hooks::{All, BprmCheckSecurity, FileOpen, SocketBind, SocketConnect, TaskFixSetuid};
+use hooks::{
+    bprm_check_security::BprmCheckSecurity, file_open::FileOpen, sb_mount::SbMount,
+    sb_remount::SbRemount, sb_umount::SbUmount, socket_bind::SocketBind,
+    socket_connect::SocketConnect, task_fix_setuid::TaskFixSetuid, All,
+};
 use policy::inode::InodeSubjectMap;
 
 pub struct PolicyManager {
@@ -203,32 +260,44 @@ impl PolicyManager {
     pub fn attach_all(&mut self) -> Result<All, EbpfguardError> {
         let bprm_check_security = self.attach_bprm_check_security()?;
         let file_open = self.attach_file_open()?;
-        let task_fix_setuid = self.attach_task_fix_setuid()?;
+        let sb_mount = self.attach_sb_mount()?;
+        let sb_remount = self.attach_sb_remount()?;
+        let sb_umount = self.attach_sb_umount()?;
         let socket_bind = self.attach_socket_bind()?;
         let socket_connect = self.attach_socket_connect()?;
+        let task_fix_setuid = self.attach_task_fix_setuid()?;
 
         Ok(All {
             bprm_check_security,
             file_open,
-            task_fix_setuid,
+            sb_mount,
+            sb_remount,
+            sb_umount,
             socket_bind,
             socket_connect,
+            task_fix_setuid,
         })
     }
 
     pub fn manage_all(&mut self) -> Result<All, EbpfguardError> {
         let bprm_check_security = self.manage_bprm_check_security()?;
         let file_open = self.manage_file_open()?;
-        let task_fix_setuid = self.manage_task_fix_setuid()?;
+        let sb_mount = self.manage_sb_mount()?;
+        let sb_remount = self.manage_sb_remount()?;
+        let sb_umount = self.manage_sb_umount()?;
         let socket_bind = self.manage_socket_bind()?;
         let socket_connect = self.manage_socket_connect()?;
+        let task_fix_setuid = self.manage_task_fix_setuid()?;
 
         Ok(All {
             bprm_check_security,
             file_open,
-            task_fix_setuid,
+            sb_mount,
+            sb_remount,
+            sb_umount,
             socket_bind,
             socket_connect,
+            task_fix_setuid,
         })
     }
 
@@ -300,6 +369,73 @@ impl PolicyManager {
             .try_into()?;
 
         Ok(TaskFixSetuid {
+            program_link: None,
+            allowed_map,
+            denied_map,
+            perf_array,
+        })
+    }
+
+    pub fn attach_sb_mount(&mut self) -> Result<SbMount, EbpfguardError> {
+        let mut sb_mount = self.manage_sb_mount()?;
+        let program_link = self.attach_program("sb_mount")?;
+        sb_mount.program_link = Some(program_link);
+
+        Ok(sb_mount)
+    }
+
+    pub fn manage_sb_mount(&mut self) -> Result<SbMount, EbpfguardError> {
+        let allowed_map = self.bpf.take_map("ALLOWED_SB_MOUNT").unwrap().try_into()?;
+        let denied_map = self.bpf.take_map("DENIED_SB_MOUNT").unwrap().try_into()?;
+        let perf_array = self.bpf.take_map("ALERT_SB_MOUNT").unwrap().try_into()?;
+
+        Ok(SbMount {
+            program_link: None,
+            allowed_map,
+            denied_map,
+            perf_array,
+        })
+    }
+
+    pub fn attach_sb_remount(&mut self) -> Result<SbRemount, EbpfguardError> {
+        let mut sb_remount = self.manage_sb_remount()?;
+        let program_link = self.attach_program("sb_remount")?;
+        sb_remount.program_link = Some(program_link);
+
+        Ok(sb_remount)
+    }
+
+    pub fn manage_sb_remount(&mut self) -> Result<SbRemount, EbpfguardError> {
+        let allowed_map = self
+            .bpf
+            .take_map("ALLOWED_SB_REMOUNT")
+            .unwrap()
+            .try_into()?;
+        let denied_map = self.bpf.take_map("DENIED_SB_REMOUNT").unwrap().try_into()?;
+        let perf_array = self.bpf.take_map("ALERT_SB_REMOUNT").unwrap().try_into()?;
+
+        Ok(SbRemount {
+            program_link: None,
+            allowed_map,
+            denied_map,
+            perf_array,
+        })
+    }
+
+    pub fn attach_sb_umount(&mut self) -> Result<SbUmount, EbpfguardError> {
+        let mut sb_umount = self.manage_sb_umount()?;
+        let program_link = self.attach_program("sb_umount")?;
+        sb_umount.program_link = Some(program_link);
+
+        Ok(sb_umount)
+    }
+
+    pub fn manage_sb_umount(&mut self) -> Result<SbUmount, EbpfguardError> {
+        let allowed_map = self.bpf.take_map("ALLOWED_SB_UMOUNT").unwrap().try_into()?;
+        let denied_map = self.bpf.take_map("DENIED_SB_UMOUNT").unwrap().try_into()?;
+        let perf_array = self.bpf.take_map("ALERT_SB_UMOUNT").unwrap().try_into()?;
+
+        Ok(SbUmount {
             program_link: None,
             allowed_map,
             denied_map,
