@@ -45,26 +45,52 @@ impl From<alerts::FileOpen> for FileOpen {
 }
 
 #[derive(Debug)]
-pub struct TaskFixSetuid {
+pub struct SbMount {
     pub pid: u32,
     pub subject: PolicySubject,
-    pub old_uid: u32,
-    pub old_gid: u32,
-    pub new_uid: u32,
-    pub new_gid: u32,
 }
 
-impl Alert for TaskFixSetuid {}
+impl Alert for SbMount {}
 
-impl From<alerts::TaskFixSetuid> for TaskFixSetuid {
-    fn from(alert: alerts::TaskFixSetuid) -> Self {
+impl From<alerts::SbMount> for SbMount {
+    fn from(alert: alerts::SbMount) -> Self {
         Self {
             pid: alert.pid,
             subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
-            old_uid: alert.old_uid,
-            old_gid: alert.old_gid,
-            new_uid: alert.new_uid,
-            new_gid: alert.new_gid,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SbRemount {
+    pub pid: u32,
+    pub subject: PolicySubject,
+}
+
+impl Alert for SbRemount {}
+
+impl From<alerts::SbRemount> for SbRemount {
+    fn from(alert: alerts::SbRemount) -> Self {
+        Self {
+            pid: alert.pid,
+            subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SbUmount {
+    pub pid: u32,
+    pub subject: PolicySubject,
+}
+
+impl Alert for SbUmount {}
+
+impl From<alerts::SbUmount> for SbUmount {
+    fn from(alert: alerts::SbUmount) -> Self {
+        Self {
+            pid: alert.pid,
+            subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
         }
     }
 }
@@ -108,6 +134,31 @@ impl From<alerts::SocketConnect> for SocketConnect {
             pid: alert.pid,
             subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
             addr,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct TaskFixSetuid {
+    pub pid: u32,
+    pub subject: PolicySubject,
+    pub old_uid: u32,
+    pub old_gid: u32,
+    pub new_uid: u32,
+    pub new_gid: u32,
+}
+
+impl Alert for TaskFixSetuid {}
+
+impl From<alerts::TaskFixSetuid> for TaskFixSetuid {
+    fn from(alert: alerts::TaskFixSetuid) -> Self {
+        Self {
+            pid: alert.pid,
+            subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
+            old_uid: alert.old_uid,
+            old_gid: alert.old_gid,
+            new_uid: alert.new_uid,
+            new_gid: alert.new_gid,
         }
     }
 }

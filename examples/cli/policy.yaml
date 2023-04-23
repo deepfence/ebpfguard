@@ -4,11 +4,12 @@
 - !setuid
   subject: !binary /usr/bin/sudo
   allow: true
-- !file_open
+- !sb_mount
   subject: all
-  allow: all
-  deny: !paths
-    - /tmp/test
+  allow: false
+- !sb_mount
+  subject: !binary /usr/bin/mount
+  allow: true
 - !socket_bind
   subject: all
   allow: !ports

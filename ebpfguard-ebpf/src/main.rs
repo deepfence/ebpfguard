@@ -4,7 +4,8 @@
 use aya_bpf::{macros::lsm, programs::LsmContext};
 
 use ebpfguard_ebpf::{
-    bprm_check_security::bprm_check_security, file_open::file_open, socket_bind::socket_bind,
+    bprm_check_security::bprm_check_security, file_open::file_open, sb_mount::sb_mount,
+    sb_remount::sb_remount, sb_umount::sb_umount, socket_bind::socket_bind,
     socket_connect::socket_connect, task_fix_setuid::task_fix_setuid,
 };
 
@@ -27,6 +28,21 @@ pub fn prog_task_fix_setuid(ctx: LsmContext) -> i32 {
         Ok(ret) => ret,
         Err(_) => 0,
     }
+}
+
+#[lsm(name = "sb_mount")]
+pub fn prog_sb_mount(ctx: LsmContext) -> i32 {
+    sb_mount(ctx).into()
+}
+
+#[lsm(name = "sb_remount")]
+pub fn prog_sb_remount(ctx: LsmContext) -> i32 {
+    sb_remount(ctx).into()
+}
+
+#[lsm(name = "sb_umount")]
+pub fn prog_sb_umount(ctx: LsmContext) -> i32 {
+    sb_umount(ctx).into()
 }
 
 #[lsm(name = "socket_bind")]

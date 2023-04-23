@@ -45,9 +45,12 @@ LSM hooks supported by Ebpfguard are:
 
 * [`bprm_check_security`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L62)
 * [`file_open`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L620)
-* [`task_fix_setuid`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L709)
+* [`sb_mount`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L128)
+* [`sb_remount`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L147)
+* [`sb_umount`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L159)
 * [`socket_bind`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L904)
 * [`socket_connect`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L912)
+* [`task_fix_setuid`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L709)
 
 ## Examples
 
@@ -88,6 +91,56 @@ The policy application should show logs like:
 ```bash
 [2023-04-22T20:51:01Z INFO  file_open] file_open: pid=3001 subject=980333 path=9632
 [2023-04-22T20:51:03Z INFO  file_open] file_open: pid=3010 subject=980298 path=9633
+```
+#### mount
+
+The [mount](https://github.com/deepfence/ebpfguard/tree/main/examples/file_open)
+example shows how to define a policy for `sb_mount`, `sb_remount` and
+`sb_umount` LSM hooks as Rust code. It denies the mount operations for all
+processes except for the optionally given one.
+
+To try it out, let's create two directories:
+
+```bash
+$ mkdir /tmp/test1
+$ mkdir /tmp/test2
+```
+
+Then run our example policy program, first without providing any binary to
+allow mount for (so it's denied for all processes):
+
+```bash
+$ RUST_LOG=info cargo xtask run --example mount
+```
+
+Let's try to bind mount the first directory to the second one. It should
+fail with the following error:
+
+```bash
+sudo mount --bind /tmp/test1 /tmp/test2
+mount: /tmp/test2: permission denied.
+       dmesg(1) may have more information after failed mount system call.
+```
+
+And the policy program should show a log like:
+
+```bash
+[2023-04-23T21:02:58Z INFO  mount] sb_mount: pid=17363 subject=678150
+```
+
+Now let's try to allow mount operations for the mount binary:
+
+```bash
+$ RUST_LOG=info cargo xtask run --example mount -- --allow /usr/bin/mount
+```
+
+And try to bind mount the first directory to the second one again. It should
+succeed this time:
+
+```bash
+$ sudo mount --bind /tmp/test1 /tmp/test2
+$ mount | grep test
+tmpfs on /tmp/test2 type tmpfs (rw,nosuid,nodev,seclabel,nr_inodes=1048576,inode64)
 ```
 
 #### `task_fix_setuid`

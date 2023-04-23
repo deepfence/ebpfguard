@@ -4,12 +4,14 @@ use clap::{Parser, Subcommand};
 use cli_table::{print_stdout, Cell, Style, Table};
 
 mod file_open;
+mod sb_mount;
 mod socket_bind;
 mod socket_connect;
 mod task_fix_setuid;
 
 use ebpfguard::{policy::reader, PolicyManager};
 use file_open::list_file_open;
+use sb_mount::list_sb_mount;
 use socket_bind::list_socket_bind;
 use socket_connect::list_socket_connect;
 use task_fix_setuid::list_task_fix_setuid;
@@ -80,6 +82,7 @@ async fn add_policies(policy_manager: &mut PolicyManager, r#path: PathBuf) -> an
 async fn list_policies(policy_manager: &mut PolicyManager) -> anyhow::Result<()> {
     let file_open = list_file_open(policy_manager).await?;
     let setuid = list_task_fix_setuid(policy_manager).await?;
+    let sb_mount = list_sb_mount(policy_manager).await?;
     let socket_bind = list_socket_bind(policy_manager).await?;
     let socket_connect = list_socket_connect(policy_manager).await?;
 
@@ -88,6 +91,8 @@ async fn list_policies(policy_manager: &mut PolicyManager) -> anyhow::Result<()>
         vec![file_open.display()?.cell()],
         vec!["setuid".cell()],
         vec![setuid.display()?.cell()],
+        vec!["sb_mount".cell()],
+        vec![sb_mount.display()?.cell()],
         vec!["socket_bind".cell()],
         vec![socket_bind.display()?.cell()],
         vec!["socket_connect".cell()],

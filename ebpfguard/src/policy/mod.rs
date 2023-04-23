@@ -165,12 +165,18 @@ impl Addresses {
 pub enum Policy {
     #[serde(rename = "file_open")]
     FileOpen(FileOpen),
-    #[serde(rename = "setuid")]
-    TaskFixSetuid(TaskFixSetuid),
+    #[serde(rename = "sb_mount")]
+    SbMount(SbMount),
+    #[serde(rename = "sb_remount")]
+    SbRemount(SbRemount),
+    #[serde(rename = "sb_umount")]
+    SbUmount(SbUmount),
     #[serde(rename = "socket_bind")]
     SocketBind(SocketBind),
     #[serde(rename = "socket_connect")]
     SocketConnect(SocketConnect),
+    #[serde(rename = "task_fix_setuid")]
+    TaskFixSetuid(TaskFixSetuid),
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -181,7 +187,19 @@ pub struct FileOpen {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TaskFixSetuid {
+pub struct SbMount {
+    pub subject: PolicySubject,
+    pub allow: bool,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SbRemount {
+    pub subject: PolicySubject,
+    pub allow: bool,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SbUmount {
     pub subject: PolicySubject,
     pub allow: bool,
 }
@@ -198,6 +216,12 @@ pub struct SocketConnect {
     pub subject: PolicySubject,
     pub allow: Addresses,
     pub deny: Addresses,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskFixSetuid {
+    pub subject: PolicySubject,
+    pub allow: bool,
 }
 
 #[cfg(test)]
@@ -241,28 +265,28 @@ mod test {
     }
 
     #[test]
-    fn test_setuid() {
+    fn test_sb_mount() {
         let yaml = "
-- !setuid
-  subject: all  
+- !sb_mount
+  subject: all
   allow: false
-- !setuid
-  subject: !binary /usr/bin/sudo
+- !sb_mount
+  subject: !binary /usr/bin/mount
   allow: true
 ";
         let policy = serde_yaml::from_str::<Vec<Policy>>(yaml).unwrap();
         assert_eq!(policy.len(), 2);
         assert_eq!(
             policy[0],
-            Policy::TaskFixSetuid(TaskFixSetuid {
+            Policy::SbMount(SbMount {
                 subject: PolicySubject::All,
                 allow: false
             })
         );
         assert_eq!(
             policy[1],
-            Policy::TaskFixSetuid(TaskFixSetuid {
-                subject: PolicySubject::Binary(PathBuf::from("/usr/bin/sudo")),
+            Policy::SbMount(SbMount {
+                subject: PolicySubject::Binary(PathBuf::from("/usr/bin/mount")),
                 allow: true
             })
         );
@@ -345,6 +369,34 @@ mod test {
                         0x2001, 0x0db8, 0x3333, 0x4444, 0xCCCC, 0xDDDD, 0xEEEE, 0xFFFF
                     )),
                 ]),
+            })
+        );
+    }
+
+    #[test]
+    fn test_task_fix_setuid() {
+        let yaml = "
+- !task_fix_setuid
+  subject: all
+  allow: false
+- !task_fix_setuid
+  subject: !binary /usr/bin/sudo
+  allow: true
+";
+        let policy = serde_yaml::from_str::<Vec<Policy>>(yaml).unwrap();
+        assert_eq!(policy.len(), 2);
+        assert_eq!(
+            policy[0],
+            Policy::TaskFixSetuid(TaskFixSetuid {
+                subject: PolicySubject::All,
+                allow: false
+            })
+        );
+        assert_eq!(
+            policy[1],
+            Policy::TaskFixSetuid(TaskFixSetuid {
+                subject: PolicySubject::Binary(PathBuf::from("/usr/bin/sudo")),
+                allow: true
             })
         );
     }

@@ -79,6 +79,66 @@ impl Alert for TaskFixSetuid {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
+pub struct SbMount {
+    pub pid: u32,
+    _padding: u32,
+    pub binprm_inode: u64,
+}
+
+impl SbMount {
+    pub fn new(pid: u32, binprm_inode: u64) -> Self {
+        Self {
+            pid,
+            _padding: 0,
+            binprm_inode,
+        }
+    }
+}
+
+impl Alert for SbMount {}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct SbRemount {
+    pub pid: u32,
+    _padding: u32,
+    pub binprm_inode: u64,
+}
+
+impl SbRemount {
+    pub fn new(pid: u32, binprm_inode: u64) -> Self {
+        Self {
+            pid,
+            _padding: 0,
+            binprm_inode,
+        }
+    }
+}
+
+impl Alert for SbRemount {}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct SbUmount {
+    pub pid: u32,
+    _padding: u32,
+    pub binprm_inode: u64,
+}
+
+impl SbUmount {
+    pub fn new(pid: u32, binprm_inode: u64) -> Self {
+        Self {
+            pid,
+            _padding: 0,
+            binprm_inode,
+        }
+    }
+}
+
+impl Alert for SbUmount {}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct SocketBind {
     pub pid: u32,
     _padding1: u32,
@@ -146,7 +206,8 @@ pub mod user {
 
     unsafe impl Pod for BprmCheckSecurity {}
     unsafe impl Pod for FileOpen {}
-    unsafe impl Pod for TaskFixSetuid {}
+    unsafe impl Pod for SbMount {}
     unsafe impl Pod for SocketBind {}
     unsafe impl Pod for SocketConnect {}
+    unsafe impl Pod for TaskFixSetuid {}
 }
