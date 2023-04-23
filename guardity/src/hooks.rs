@@ -22,7 +22,7 @@ use tokio::{
     task,
 };
 
-use crate::{alerts, policy, InodeSubjectMap};
+use crate::{alerts, error::GuardityError, policy, InodeSubjectMap};
 
 static INODE_SUBJECT_MAP: Lazy<Mutex<InodeSubjectMap>> =
     Lazy::new(|| Mutex::new(InodeSubjectMap::default()));
@@ -36,7 +36,7 @@ pub struct All {
 }
 
 impl All {
-    pub async fn add_policy(&mut self, policy: policy::Policy) -> anyhow::Result<()> {
+    pub async fn add_policy(&mut self, policy: policy::Policy) -> Result<(), GuardityError> {
         match policy {
             policy::Policy::FileOpen(policy) => self.file_open.add_policy(policy).await?,
             policy::Policy::TaskFixSetuid(policy) => {
@@ -57,7 +57,7 @@ pub struct BprmCheckSecurity {
 }
 
 impl BprmCheckSecurity {
-    pub async fn alerts(&mut self) -> anyhow::Result<Receiver<alerts::BprmCheckSecurity>> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::BprmCheckSecurity>, GuardityError> {
         perf_array_alerts::<ebpf_alerts::BprmCheckSecurity, alerts::BprmCheckSecurity>(
             &mut self.perf_array,
         )
@@ -74,7 +74,7 @@ pub struct FileOpen {
 }
 
 impl FileOpen {
-    pub async fn add_policy(&mut self, policy: policy::FileOpen) -> anyhow::Result<()> {
+    pub async fn add_policy(&mut self, policy: policy::FileOpen) -> Result<(), GuardityError> {
         let bin_inode = {
             let mut map = INODE_SUBJECT_MAP.lock().await;
             map.resolve_path(policy.subject)?
@@ -89,7 +89,7 @@ impl FileOpen {
         Ok(())
     }
 
-    pub async fn list_policies(&self) -> anyhow::Result<Vec<policy::FileOpen>> {
+    pub async fn list_policies(&self) -> Result<Vec<policy::FileOpen>, GuardityError> {
         let mut policies = Vec::new();
 
         for res in self.allowed_map.iter() {
@@ -111,7 +111,7 @@ impl FileOpen {
         Ok(policies)
     }
 
-    pub async fn alerts(&mut self) -> anyhow::Result<Receiver<alerts::FileOpen>> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::FileOpen>, GuardityError> {
         perf_array_alerts::<ebpf_alerts::FileOpen, alerts::FileOpen>(&mut self.perf_array).await
     }
 }
@@ -125,7 +125,7 @@ pub struct TaskFixSetuid {
 }
 
 impl TaskFixSetuid {
-    pub async fn add_policy(&mut self, policy: policy::TaskFixSetuid) -> anyhow::Result<()> {
+    pub async fn add_policy(&mut self, policy: policy::TaskFixSetuid) -> Result<(), GuardityError> {
         let bin_inode = {
             let mut map = INODE_SUBJECT_MAP.lock().await;
             map.resolve_path(policy.subject)?
@@ -140,7 +140,7 @@ impl TaskFixSetuid {
         Ok(())
     }
 
-    pub async fn list_policies(&self) -> anyhow::Result<Vec<policy::TaskFixSetuid>> {
+    pub async fn list_policies(&self) -> Result<Vec<policy::TaskFixSetuid>, GuardityError> {
         let mut policies = Vec::new();
 
         for res in self.allowed_map.iter() {
@@ -174,7 +174,7 @@ impl TaskFixSetuid {
         Ok(policies)
     }
 
-    pub async fn alerts(&mut self) -> anyhow::Result<Receiver<alerts::TaskFixSetuid>> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::TaskFixSetuid>, GuardityError> {
         perf_array_alerts::<ebpf_alerts::TaskFixSetuid, alerts::TaskFixSetuid>(&mut self.perf_array)
             .await
     }
@@ -189,7 +189,7 @@ pub struct SocketBind {
 }
 
 impl SocketBind {
-    pub async fn add_policy(&mut self, policy: policy::SocketBind) -> anyhow::Result<()> {
+    pub async fn add_policy(&mut self, policy: policy::SocketBind) -> Result<(), GuardityError> {
         let bin_inode = {
             let mut map = INODE_SUBJECT_MAP.lock().await;
             map.resolve_path(policy.subject)?
@@ -204,7 +204,7 @@ impl SocketBind {
         Ok(())
     }
 
-    pub async fn list_policies(&self) -> anyhow::Result<Vec<policy::SocketBind>> {
+    pub async fn list_policies(&self) -> Result<Vec<policy::SocketBind>, GuardityError> {
         let mut policies = Vec::new();
 
         for res in self.allowed_map.iter() {
@@ -226,7 +226,7 @@ impl SocketBind {
         Ok(policies)
     }
 
-    pub async fn alerts(&mut self) -> anyhow::Result<Receiver<alerts::SocketBind>> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::SocketBind>, GuardityError> {
         perf_array_alerts::<ebpf_alerts::SocketBind, alerts::SocketBind>(&mut self.perf_array).await
     }
 }
@@ -242,7 +242,7 @@ pub struct SocketConnect {
 }
 
 impl SocketConnect {
-    pub async fn add_policy(&mut self, policy: policy::SocketConnect) -> anyhow::Result<()> {
+    pub async fn add_policy(&mut self, policy: policy::SocketConnect) -> Result<(), GuardityError> {
         let bin_inode = {
             let mut map = INODE_SUBJECT_MAP.lock().await;
             map.resolve_path(policy.subject)?
@@ -259,7 +259,7 @@ impl SocketConnect {
         Ok(())
     }
 
-    pub async fn list_policies(&self) -> anyhow::Result<Vec<policy::SocketConnect>> {
+    pub async fn list_policies(&self) -> Result<Vec<policy::SocketConnect>, GuardityError> {
         let mut policies = Vec::new();
 
         for res in self.allowed_map_v4.iter() {
@@ -273,40 +273,38 @@ impl SocketConnect {
                 map.resolve_inode(bin_inode)
             };
 
-            let allow = if allow_v4.all() {
-                if allow_v6.all() {
-                    policy::Addresses::All
-                } else {
-                    return Err(anyhow::anyhow!("Inconsistent policy state"));
-                }
+            let allow = if allow_v4.all() && allow_v6.all() {
+                policy::Addresses::All
             } else {
-                if allow_v4.all() {
-                    return Err(anyhow::anyhow!("Inconsistent policy state"));
-                }
                 let mut addrs = Vec::new();
                 for addr in allow_v4.addrs.iter() {
+                    if *addr == 0 {
+                        break;
+                    }
                     addrs.push(IpAddr::V4(Ipv4Addr::from(addr.to_owned())));
                 }
                 for addr in allow_v6.addrs.iter() {
+                    if *addr == [0u8; 16] {
+                        break;
+                    }
                     addrs.push(IpAddr::V6(Ipv6Addr::from(addr.to_owned())));
                 }
                 policy::Addresses::Addresses(addrs)
             };
-            let deny = if deny_v4.all() {
-                if deny_v6.all() {
-                    policy::Addresses::All
-                } else {
-                    return Err(anyhow::anyhow!("Inconsistent policy state"));
-                }
+            let deny = if deny_v4.all() && deny_v6.all() {
+                policy::Addresses::All
             } else {
-                if deny_v4.all() {
-                    return Err(anyhow::anyhow!("Inconsistent policy state"));
-                }
                 let mut addrs = Vec::new();
                 for addr in deny_v4.addrs.iter() {
+                    if *addr == 0 {
+                        break;
+                    }
                     addrs.push(IpAddr::V4(Ipv4Addr::from(addr.to_owned())));
                 }
                 for addr in deny_v6.addrs.iter() {
+                    if *addr == [0u8; 16] {
+                        break;
+                    }
                     addrs.push(IpAddr::V6(Ipv6Addr::from(addr.to_owned())));
                 }
                 policy::Addresses::Addresses(addrs)
@@ -322,7 +320,7 @@ impl SocketConnect {
         Ok(policies)
     }
 
-    pub async fn alerts(&mut self) -> anyhow::Result<Receiver<alerts::SocketConnect>> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::SocketConnect>, GuardityError> {
         perf_array_alerts::<ebpf_alerts::SocketConnect, alerts::SocketConnect>(&mut self.perf_array)
             .await
     }
@@ -330,7 +328,7 @@ impl SocketConnect {
 
 pub async fn perf_array_alerts<E, U>(
     perf_array: &mut AsyncPerfEventArray<MapData>,
-) -> anyhow::Result<Receiver<U>>
+) -> Result<Receiver<U>, GuardityError>
 where
     E: ebpf_alerts::Alert,
     U: alerts::Alert + Debug + Send + From<E> + 'static,
