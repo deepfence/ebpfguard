@@ -1,4 +1,7 @@
-use std::{fs::create_dir_all, path::PathBuf};
+use std::{
+    fs::{create_dir_all, remove_dir_all},
+    path::PathBuf,
+};
 
 use clap::Parser;
 use guardity::{
@@ -34,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
     create_dir_all(&bpf_path)?;
 
     // Create a policy manager.
-    let mut policy_manager = PolicyManager::new(bpf_path)?;
+    let mut policy_manager = PolicyManager::new(&bpf_path)?;
 
     // Attach the policy manager to the `file_open` LSM hook.
     let mut file_open = policy_manager.attach_file_open()?;
@@ -73,6 +76,9 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
+
+    info!("Exiting...");
+    remove_dir_all(&bpf_path)?;
 
     Ok(())
 }

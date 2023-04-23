@@ -5,7 +5,7 @@ pub mod bprm_check_security;
 pub mod consts;
 pub mod file_open;
 pub mod maps;
-pub mod setuid;
+pub mod task_fix_setuid;
 pub mod socket_bind;
 pub mod socket_connect;
 #[allow(non_upper_case_globals)]
