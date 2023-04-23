@@ -4,7 +4,7 @@
 use aya_bpf::{macros::lsm, programs::LsmContext};
 
 use guardity_ebpf::{
-    bprm_check_security::bprm_check_security, file_open::file_open, setuid::task_fix_setuid,
+    bprm_check_security::bprm_check_security, file_open::file_open, task_fix_setuid::task_fix_setuid,
     socket_bind::socket_bind, socket_connect::socket_connect,
 };
 

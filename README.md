@@ -53,6 +53,8 @@ LSM hooks supported by Guardity are:
 
 ### Defining single policies
 
+#### `file_open`
+
 The [file_open](https://github.com/deepfence/guardity/tree/main/examples/file_open)
 example shows how to define a policy for `file_open` LSM hook as Rust code.
 It denies the given binary (or all processes, if none defined) from opening
@@ -86,6 +88,48 @@ The policy application should show logs like:
 ```bash
 [2023-04-22T20:51:01Z INFO  file_open] file_open: pid=3001 subject=980333 path=9632
 [2023-04-22T20:51:03Z INFO  file_open] file_open: pid=3010 subject=980298 path=9633
+```
+
+#### `task_fix_setuid`
+
+The [task_fix_setuid](https://github.com/deepfence/guardity/tree/main/examples/task_fix_setuid)
+example shows how to define a policy for `task_fix_setuid` LSM hook as Rust
+code. It denies the `setuid` operation for all processes except for the
+optionally given one.
+
+To try it out, run our example policy program, first without providing any
+binary to allow `setuid` for (so it's denied for all processes):
+
+```bash
+$ RUST_LOG=info cargo xtask run --example task_fix_setuid
+```
+
+Then try to use `sudo`. It should fail with the following error:
+
+```bash
+sudo -i
+sudo: PERM_ROOT: setresuid(0, -1, -1): Operation not permitted
+sudo: error initializing audit plugin sudoers_audit
+```
+
+And the policy program should show log like:
+
+```bash
+[2023-04-23T15:15:00Z INFO  task_fix_setuid] file_open: pid=25604 subject=674642 old_uid=1000 old_gid=1000 new_uid=0 new_gid=1000
+```
+
+Now, let's try to allow `setuid` for a specific binary. Let's use `sudo`:
+
+```bash
+$ RUST_LOG=info cargo xtask run --example task_fix_setuid -- --allow /usr/bin/sudo
+```
+
+Then try to use `sudo` again. It should work this time:
+
+```bash
+$ sudo -i
+# whoami
+root
 ```
 
 ### Daemon with CLI and YAML engine
