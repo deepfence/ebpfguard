@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::fs;
+use crate::{error::GuardityError, fs};
 
 use super::PolicySubject;
 
@@ -10,7 +10,7 @@ pub struct InodeSubjectMap {
 }
 
 impl InodeSubjectMap {
-    pub fn resolve_path(&mut self, subject: PolicySubject) -> anyhow::Result<u64> {
+    pub fn resolve_path(&mut self, subject: PolicySubject) -> Result<u64, GuardityError> {
         match subject {
             PolicySubject::Binary(path) => {
                 let inode = fs::inode(&path)?;

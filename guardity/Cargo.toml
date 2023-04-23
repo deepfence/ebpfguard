@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = { version = "1", features = ["backtrace"] }
 aya = { git = "https://github.com/aya-rs/aya", branch = "main", features=["async_tokio"] }
 bytes = "1.4"
 clap = { version = "4.2", features = ["derive"] }

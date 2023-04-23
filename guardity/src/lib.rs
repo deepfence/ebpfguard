@@ -163,6 +163,7 @@ pub mod fs;
 pub mod hooks;
 pub mod policy;
 
+use error::GuardityError;
 use hooks::{All, BprmCheckSecurity, FileOpen, SocketBind, SocketConnect, TaskFixSetuid};
 use policy::inode::InodeSubjectMap;
 
@@ -181,7 +182,7 @@ impl PolicyManager {
     ///
     /// let mut policy_manager = PolicyManager::new(Path::new("/sys/fs/bpf/mypolicies")).unwrap();
     /// ```
-    pub fn new<P: AsRef<Path>>(bpf_path: P) -> anyhow::Result<Self> {
+    pub fn new<P: AsRef<Path>>(bpf_path: P) -> Result<Self, GuardityError> {
         #[cfg(debug_assertions)]
         let bpf = BpfLoader::new()
             .map_pin_path(&bpf_path)
@@ -199,7 +200,7 @@ impl PolicyManager {
     }
 
     /// Attaches and returns a handle to all LSM hooks.
-    pub fn attach_all(&mut self) -> anyhow::Result<All> {
+    pub fn attach_all(&mut self) -> Result<All, GuardityError> {
         let bprm_check_security = self.attach_bprm_check_security()?;
         let file_open = self.attach_file_open()?;
         let task_fix_setuid = self.attach_task_fix_setuid()?;
@@ -215,7 +216,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn manage_all(&mut self) -> anyhow::Result<All> {
+    pub fn manage_all(&mut self) -> Result<All, GuardityError> {
         let bprm_check_security = self.manage_bprm_check_security()?;
         let file_open = self.manage_file_open()?;
         let task_fix_setuid = self.manage_task_fix_setuid()?;
@@ -231,7 +232,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_bprm_check_security(&mut self) -> anyhow::Result<BprmCheckSecurity> {
+    pub fn attach_bprm_check_security(&mut self) -> Result<BprmCheckSecurity, GuardityError> {
         let mut bprm_check_security = self.manage_bprm_check_security()?;
         let program_link = self.attach_program("bprm_check_security")?;
         bprm_check_security.program_link = Some(program_link);
@@ -239,7 +240,7 @@ impl PolicyManager {
         Ok(bprm_check_security)
     }
 
-    pub fn manage_bprm_check_security(&mut self) -> anyhow::Result<BprmCheckSecurity> {
+    pub fn manage_bprm_check_security(&mut self) -> Result<BprmCheckSecurity, GuardityError> {
         let perf_array = self
             .bpf
             .take_map("ALERT_BPRM_CHECK_SECURITY")
@@ -252,7 +253,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_file_open(&mut self) -> anyhow::Result<FileOpen> {
+    pub fn attach_file_open(&mut self) -> Result<FileOpen, GuardityError> {
         let mut file_open = self.manage_file_open()?;
         let program_link = self.attach_program("file_open")?;
         file_open.program_link = Some(program_link);
@@ -260,7 +261,7 @@ impl PolicyManager {
         Ok(file_open)
     }
 
-    pub fn manage_file_open(&mut self) -> anyhow::Result<FileOpen> {
+    pub fn manage_file_open(&mut self) -> Result<FileOpen, GuardityError> {
         let allowed_map = self.bpf.take_map("ALLOWED_FILE_OPEN").unwrap().try_into()?;
         let denied_map = self.bpf.take_map("DENIED_FILE_OPEN").unwrap().try_into()?;
         let perf_array = self.bpf.take_map("ALERT_FILE_OPEN").unwrap().try_into()?;
@@ -273,7 +274,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_task_fix_setuid(&mut self) -> anyhow::Result<TaskFixSetuid> {
+    pub fn attach_task_fix_setuid(&mut self) -> Result<TaskFixSetuid, GuardityError> {
         let mut task_fix_setuid = self.manage_task_fix_setuid()?;
         let program_link = self.attach_program("task_fix_setuid")?;
         task_fix_setuid.program_link = Some(program_link);
@@ -281,7 +282,7 @@ impl PolicyManager {
         Ok(task_fix_setuid)
     }
 
-    pub fn manage_task_fix_setuid(&mut self) -> anyhow::Result<TaskFixSetuid> {
+    pub fn manage_task_fix_setuid(&mut self) -> Result<TaskFixSetuid, GuardityError> {
         let allowed_map = self
             .bpf
             .take_map("ALLOWED_TASK_FIX_SETUID")
@@ -306,7 +307,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_socket_bind(&mut self) -> anyhow::Result<SocketBind> {
+    pub fn attach_socket_bind(&mut self) -> Result<SocketBind, GuardityError> {
         let mut socket_bind = self.manage_socket_bind()?;
         let program_link = self.attach_program("socket_bind")?;
         socket_bind.program_link = Some(program_link);
@@ -314,7 +315,7 @@ impl PolicyManager {
         Ok(socket_bind)
     }
 
-    pub fn manage_socket_bind(&mut self) -> anyhow::Result<SocketBind> {
+    pub fn manage_socket_bind(&mut self) -> Result<SocketBind, GuardityError> {
         let allowed_map = self
             .bpf
             .take_map("ALLOWED_SOCKET_BIND")
@@ -335,7 +336,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_socket_connect(&mut self) -> anyhow::Result<SocketConnect> {
+    pub fn attach_socket_connect(&mut self) -> Result<SocketConnect, GuardityError> {
         let mut socket_connect = self.manage_socket_connect()?;
         let program_link = self.attach_program("socket_connect")?;
         socket_connect.program_link = Some(program_link);
@@ -343,7 +344,7 @@ impl PolicyManager {
         Ok(socket_connect)
     }
 
-    pub fn manage_socket_connect(&mut self) -> anyhow::Result<SocketConnect> {
+    pub fn manage_socket_connect(&mut self) -> Result<SocketConnect, GuardityError> {
         let allowed_map_v4 = self
             .bpf
             .take_map("ALLOWED_SOCKET_CONNECT_V4")
@@ -380,7 +381,7 @@ impl PolicyManager {
         })
     }
 
-    fn attach_program(&mut self, name: &str) -> anyhow::Result<LsmLink> {
+    fn attach_program(&mut self, name: &str) -> Result<LsmLink, GuardityError> {
         let btf = Btf::from_sys_fs()?;
         let program: &mut Lsm = self.bpf.program_mut(name).unwrap().try_into()?;
         program.load(name, &btf)?;
