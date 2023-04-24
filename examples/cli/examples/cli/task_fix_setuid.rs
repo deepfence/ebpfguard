@@ -1,5 +1,5 @@
 use cli_table::{Cell, Style, Table, TableStruct};
-use guardity::PolicyManager;
+use ebpfguard::PolicyManager;
 
 pub(crate) async fn list_task_fix_setuid(
     policy_manager: &mut PolicyManager,

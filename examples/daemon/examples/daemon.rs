@@ -2,7 +2,7 @@ use std::fs::create_dir_all;
 use std::path::PathBuf;
 
 use clap::Parser;
-use guardity::PolicyManager;
+use ebpfguard::PolicyManager;
 use log::info;
 use tokio::signal;
 
@@ -10,7 +10,7 @@ use tokio::signal;
 struct Opt {
     #[clap(long, default_value = "/sys/fs/bpf")]
     bpffs_path: PathBuf,
-    #[clap(long, default_value = "guardity")]
+    #[clap(long, default_value = "ebpfguard")]
     bpffs_dir: PathBuf,
     #[clap(long)]
     policy: Vec<PathBuf>,

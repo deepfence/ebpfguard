@@ -9,7 +9,7 @@ use aya::{
     util::online_cpus,
 };
 use bytes::BytesMut;
-use guardity_common::{
+use ebpfguard_common::{
     alerts as ebpf_alerts,
     policy::{self as ebpf_policy, IpAddrs},
 };
@@ -22,7 +22,7 @@ use tokio::{
     task,
 };
 
-use crate::{alerts, error::GuardityError, policy, InodeSubjectMap};
+use crate::{alerts, error::EbpfguardError, policy, InodeSubjectMap};
 
 static INODE_SUBJECT_MAP: Lazy<Mutex<InodeSubjectMap>> =
     Lazy::new(|| Mutex::new(InodeSubjectMap::default()));
@@ -36,7 +36,7 @@ pub struct All {
 }
 
 impl All {
-    pub async fn add_policy(&mut self, policy: policy::Policy) -> Result<(), GuardityError> {
+    pub async fn add_policy(&mut self, policy: policy::Policy) -> Result<(), EbpfguardError> {
         match policy {
             policy::Policy::FileOpen(policy) => self.file_open.add_policy(policy).await?,
             policy::Policy::TaskFixSetuid(policy) => {
@@ -57,7 +57,7 @@ pub struct BprmCheckSecurity {
 }
 
 impl BprmCheckSecurity {
-    pub async fn alerts(&mut self) -> Result<Receiver<alerts::BprmCheckSecurity>, GuardityError> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::BprmCheckSecurity>, EbpfguardError> {
         perf_array_alerts::<ebpf_alerts::BprmCheckSecurity, alerts::BprmCheckSecurity>(
             &mut self.perf_array,
         )
@@ -74,7 +74,7 @@ pub struct FileOpen {
 }
 
 impl FileOpen {
-    pub async fn add_policy(&mut self, policy: policy::FileOpen) -> Result<(), GuardityError> {
+    pub async fn add_policy(&mut self, policy: policy::FileOpen) -> Result<(), EbpfguardError> {
         let bin_inode = {
             let mut map = INODE_SUBJECT_MAP.lock().await;
             map.resolve_path(policy.subject)?
@@ -89,7 +89,7 @@ impl FileOpen {
         Ok(())
     }
 
-    pub async fn list_policies(&self) -> Result<Vec<policy::FileOpen>, GuardityError> {
+    pub async fn list_policies(&self) -> Result<Vec<policy::FileOpen>, EbpfguardError> {
         let mut policies = Vec::new();
 
         for res in self.allowed_map.iter() {
@@ -111,7 +111,7 @@ impl FileOpen {
         Ok(policies)
     }
 
-    pub async fn alerts(&mut self) -> Result<Receiver<alerts::FileOpen>, GuardityError> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::FileOpen>, EbpfguardError> {
         perf_array_alerts::<ebpf_alerts::FileOpen, alerts::FileOpen>(&mut self.perf_array).await
     }
 }
@@ -125,7 +125,10 @@ pub struct TaskFixSetuid {
 }
 
 impl TaskFixSetuid {
-    pub async fn add_policy(&mut self, policy: policy::TaskFixSetuid) -> Result<(), GuardityError> {
+    pub async fn add_policy(
+        &mut self,
+        policy: policy::TaskFixSetuid,
+    ) -> Result<(), EbpfguardError> {
         let bin_inode = {
             let mut map = INODE_SUBJECT_MAP.lock().await;
             map.resolve_path(policy.subject)?
@@ -140,7 +143,7 @@ impl TaskFixSetuid {
         Ok(())
     }
 
-    pub async fn list_policies(&self) -> Result<Vec<policy::TaskFixSetuid>, GuardityError> {
+    pub async fn list_policies(&self) -> Result<Vec<policy::TaskFixSetuid>, EbpfguardError> {
         let mut policies = Vec::new();
 
         for res in self.allowed_map.iter() {
@@ -174,7 +177,7 @@ impl TaskFixSetuid {
         Ok(policies)
     }
 
-    pub async fn alerts(&mut self) -> Result<Receiver<alerts::TaskFixSetuid>, GuardityError> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::TaskFixSetuid>, EbpfguardError> {
         perf_array_alerts::<ebpf_alerts::TaskFixSetuid, alerts::TaskFixSetuid>(&mut self.perf_array)
             .await
     }
@@ -189,7 +192,7 @@ pub struct SocketBind {
 }
 
 impl SocketBind {
-    pub async fn add_policy(&mut self, policy: policy::SocketBind) -> Result<(), GuardityError> {
+    pub async fn add_policy(&mut self, policy: policy::SocketBind) -> Result<(), EbpfguardError> {
         let bin_inode = {
             let mut map = INODE_SUBJECT_MAP.lock().await;
             map.resolve_path(policy.subject)?
@@ -204,7 +207,7 @@ impl SocketBind {
         Ok(())
     }
 
-    pub async fn list_policies(&self) -> Result<Vec<policy::SocketBind>, GuardityError> {
+    pub async fn list_policies(&self) -> Result<Vec<policy::SocketBind>, EbpfguardError> {
         let mut policies = Vec::new();
 
         for res in self.allowed_map.iter() {
@@ -226,7 +229,7 @@ impl SocketBind {
         Ok(policies)
     }
 
-    pub async fn alerts(&mut self) -> Result<Receiver<alerts::SocketBind>, GuardityError> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::SocketBind>, EbpfguardError> {
         perf_array_alerts::<ebpf_alerts::SocketBind, alerts::SocketBind>(&mut self.perf_array).await
     }
 }
@@ -242,7 +245,10 @@ pub struct SocketConnect {
 }
 
 impl SocketConnect {
-    pub async fn add_policy(&mut self, policy: policy::SocketConnect) -> Result<(), GuardityError> {
+    pub async fn add_policy(
+        &mut self,
+        policy: policy::SocketConnect,
+    ) -> Result<(), EbpfguardError> {
         let bin_inode = {
             let mut map = INODE_SUBJECT_MAP.lock().await;
             map.resolve_path(policy.subject)?
@@ -259,7 +265,7 @@ impl SocketConnect {
         Ok(())
     }
 
-    pub async fn list_policies(&self) -> Result<Vec<policy::SocketConnect>, GuardityError> {
+    pub async fn list_policies(&self) -> Result<Vec<policy::SocketConnect>, EbpfguardError> {
         let mut policies = Vec::new();
 
         for res in self.allowed_map_v4.iter() {
@@ -320,7 +326,7 @@ impl SocketConnect {
         Ok(policies)
     }
 
-    pub async fn alerts(&mut self) -> Result<Receiver<alerts::SocketConnect>, GuardityError> {
+    pub async fn alerts(&mut self) -> Result<Receiver<alerts::SocketConnect>, EbpfguardError> {
         perf_array_alerts::<ebpf_alerts::SocketConnect, alerts::SocketConnect>(&mut self.perf_array)
             .await
     }
@@ -328,7 +334,7 @@ impl SocketConnect {
 
 pub async fn perf_array_alerts<E, U>(
     perf_array: &mut AsyncPerfEventArray<MapData>,
-) -> Result<Receiver<U>, GuardityError>
+) -> Result<Receiver<U>, EbpfguardError>
 where
     E: ebpf_alerts::Alert,
     U: alerts::Alert + Debug + Send + From<E> + 'static,

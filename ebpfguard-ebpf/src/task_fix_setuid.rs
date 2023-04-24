@@ -1,5 +1,5 @@
 use aya_bpf::{cty::c_long, programs::LsmContext, BpfContext};
-use guardity_common::{alerts, consts::INODE_WILDCARD};
+use ebpfguard_common::{alerts, consts::INODE_WILDCARD};
 
 use crate::{
     binprm::current_binprm_inode,
@@ -17,7 +17,7 @@ use crate::{
 ///
 /// ```rust
 /// use aya_bpf::{macros::lsm, programs::LsmContext};
-/// use guardity_ebpf::setuid;
+/// use ebpfguard_ebpf::setuid;
 ///
 /// #[lsm(name = "my_program")]
 /// pub fn my_program(ctx: LsmContext) -> i32 {

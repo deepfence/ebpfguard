@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::Parser;
-use guardity::{
+use ebpfguard::{
     policy::{PolicySubject, TaskFixSetuid},
     PolicyManager,
 };
@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
 
     env_logger::init();
 
-    // Create a directory where guardity policy manager can store its BPF
+    // Create a directory where ebpfguard policy manager can store its BPF
     // objects (maps).
     let bpf_path = opt.bpffs_path.join(opt.bpffs_dir);
     create_dir_all(&bpf_path)?;

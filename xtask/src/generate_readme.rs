@@ -10,8 +10,8 @@ pub struct Options {
 }
 
 pub fn generate_readme(opts: Options) -> anyhow::Result<()> {
-    let project_root = current_dir()?.join("guardity");
-    let mut source = File::open("guardity/src/lib.rs")?;
+    let project_root = current_dir()?.join("ebpfguard");
+    let mut source = File::open("ebpfguard/src/lib.rs")?;
     let mut template = File::open("README.tpl")?;
 
     let content = cargo_readme::generate_readme(

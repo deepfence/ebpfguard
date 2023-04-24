@@ -1,7 +1,7 @@
 use aya_bpf::{
     cty::c_long, helpers::bpf_probe_read_kernel, maps::HashMap, programs::LsmContext, BpfContext,
 };
-use guardity_common::{
+use ebpfguard_common::{
     alerts,
     consts::INODE_WILDCARD,
     policy::{IpAddrs, Ipv4Addrs, Ipv6Addrs},
@@ -27,7 +27,7 @@ use crate::{
 ///
 /// ```rust
 /// use aya_bpf::{macros::lsm, programs::LsmContext};
-/// use guardity_ebpf::socket_connect;
+/// use ebpfguard_ebpf::socket_connect;
 ///
 /// #[lsm(name = "my_program")]
 /// pub fn my_program(ctx: LsmContext) -> i32 {

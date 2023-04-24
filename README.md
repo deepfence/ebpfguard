@@ -1,8 +1,8 @@
-[![Workflow Status](https://github.com/deepfence/guardity/workflows/build-test/badge.svg)](https://github.com/deepfence/guardity/actions?query=workflow)
+[![Workflow Status](https://github.com/deepfence/ebpfguard/workflows/build-test/badge.svg)](https://github.com/deepfence/ebpfguard/actions?query=workflow)
 
-# guardity
+# ebpfguard
 
-**Guardity** is a library for managing Linux security policies. It is based on
+**Ebpfguard** is a library for managing Linux security policies. It is based on
 [LSM hooks](https://www.kernel.org/doc/html/latest/admin-guide/LSM/index.html),
 but without necessity to write any kernel modules or eBPF programs directly.
 It allows to write policies in Rust (or YAML) in user space.
@@ -41,7 +41,7 @@ as well as bpf-linker. You can install these by following these
 
 ## LSM hooks
 
-LSM hooks supported by Guardity are:
+LSM hooks supported by Ebpfguard are:
 
 * [`bprm_check_security`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L62)
 * [`file_open`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L620)
@@ -55,7 +55,7 @@ LSM hooks supported by Guardity are:
 
 #### `file_open`
 
-The [file_open](https://github.com/deepfence/guardity/tree/main/examples/file_open)
+The [file_open](https://github.com/deepfence/ebpfguard/tree/main/examples/file_open)
 example shows how to define a policy for `file_open` LSM hook as Rust code.
 It denies the given binary (or all processes, if none defined) from opening
 the given directory.
@@ -92,7 +92,7 @@ The policy application should show logs like:
 
 #### `task_fix_setuid`
 
-The [task_fix_setuid](https://github.com/deepfence/guardity/tree/main/examples/task_fix_setuid)
+The [task_fix_setuid](https://github.com/deepfence/ebpfguard/tree/main/examples/task_fix_setuid)
 example shows how to define a policy for `task_fix_setuid` LSM hook as Rust
 code. It denies the `setuid` operation for all processes except for the
 optionally given one.
@@ -147,7 +147,7 @@ $ cargo xtask run --example cli -- --help
 ```
 
 You can apply policies from the
-[example YAML file](https://github.com/deepfence/guardity/blob/main/examples/cli/policy.yaml):
+[example YAML file](https://github.com/deepfence/ebpfguard/blob/main/examples/cli/policy.yaml):
 
 ```bash
 $ cargo xtask run --example cli -- policy add --path examples/cli/policy.yaml
@@ -155,8 +155,8 @@ $ cargo xtask run --example cli -- policy add --path examples/cli/policy.yaml
 
 ## License
 
-Guardity's userspace part is licensed under
-[Apache License, version 2.0](https://github.com/deepfence/guardity/blob/main/LICENSE).
+Ebpfguard's userspace part is licensed under
+[Apache License, version 2.0](https://github.com/deepfence/ebpfguard/blob/main/LICENSE).
 
-eBPF programs inside guardity-ebpf directory are licensed under
-[GNU General Public License, version 2](https://github.com/deepfence/guardity/blob/main/guardity-ebpf/LICENSE).
+eBPF programs inside ebpfguard-ebpf directory are licensed under
+[GNU General Public License, version 2](https://github.com/deepfence/ebpfguard/blob/main/ebpfguard-ebpf/LICENSE).

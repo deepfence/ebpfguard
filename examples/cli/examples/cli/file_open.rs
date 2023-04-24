@@ -1,5 +1,5 @@
 use cli_table::{Cell, Style, Table, TableStruct};
-use guardity::{policy::Paths, PolicyManager};
+use ebpfguard::{policy::Paths, PolicyManager};
 
 pub(crate) async fn list_file_open(
     policy_manager: &mut PolicyManager,

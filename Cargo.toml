@@ -1,7 +1,7 @@
 [workspace]
 members = [
-    "guardity",
-    "guardity-common",
+    "ebpfguard",
+    "ebpfguard-common",
     "xtask",
     "examples/*",
 ]

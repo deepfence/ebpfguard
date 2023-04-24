@@ -3,7 +3,7 @@
 
 use aya_bpf::{macros::lsm, programs::LsmContext};
 
-use guardity_ebpf::{
+use ebpfguard_ebpf::{
     bprm_check_security::bprm_check_security, file_open::file_open, socket_bind::socket_bind,
     socket_connect::socket_connect, task_fix_setuid::task_fix_setuid,
 };

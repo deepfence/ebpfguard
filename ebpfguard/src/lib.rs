@@ -1,4 +1,4 @@
-//! **Guardity** is a library for managing Linux security policies. It is based on
+//! **Ebpfguard** is a library for managing Linux security policies. It is based on
 //! [LSM hooks](https://www.kernel.org/doc/html/latest/admin-guide/LSM/index.html),
 //! but without necessity to write any kernel modules or eBPF programs directly.
 //! It allows to write policies in Rust (or YAML) in user space.
@@ -37,7 +37,7 @@
 //!
 //! # LSM hooks
 //!
-//! LSM hooks supported by Guardity are:
+//! LSM hooks supported by Ebpfguard are:
 //!
 //! * [`bprm_check_security`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L62)
 //! * [`file_open`](https://elixir.bootlin.com/linux/v6.2.12/source/include/linux/lsm_hooks.h#L620)
@@ -51,7 +51,7 @@
 //!
 //! ### `file_open`
 //!
-//! The [file_open](https://github.com/deepfence/guardity/tree/main/examples/file_open)
+//! The [file_open](https://github.com/deepfence/ebpfguard/tree/main/examples/file_open)
 //! example shows how to define a policy for `file_open` LSM hook as Rust code.
 //! It denies the given binary (or all processes, if none defined) from opening
 //! the given directory.
@@ -88,7 +88,7 @@
 //!
 //! ### `task_fix_setuid`
 //!
-//! The [task_fix_setuid](https://github.com/deepfence/guardity/tree/main/examples/task_fix_setuid)
+//! The [task_fix_setuid](https://github.com/deepfence/ebpfguard/tree/main/examples/task_fix_setuid)
 //! example shows how to define a policy for `task_fix_setuid` LSM hook as Rust
 //! code. It denies the `setuid` operation for all processes except for the
 //! optionally given one.
@@ -143,7 +143,7 @@
 //! ```
 //!
 //! You can apply policies from the
-//! [example YAML file](https://github.com/deepfence/guardity/blob/main/examples/cli/policy.yaml):
+//! [example YAML file](https://github.com/deepfence/ebpfguard/blob/main/examples/cli/policy.yaml):
 //!
 //! ```bash
 //! $ cargo xtask run --example cli -- policy add --path examples/cli/policy.yaml
@@ -163,7 +163,7 @@ pub mod fs;
 pub mod hooks;
 pub mod policy;
 
-use error::GuardityError;
+use error::EbpfguardError;
 use hooks::{All, BprmCheckSecurity, FileOpen, SocketBind, SocketConnect, TaskFixSetuid};
 use policy::inode::InodeSubjectMap;
 
@@ -177,30 +177,30 @@ impl PolicyManager {
     /// # Example
     ///
     /// ```no_run
-    /// use guardity::PolicyManager;
+    /// use ebpfguard::PolicyManager;
     /// use std::path::Path;
     ///
     /// let mut policy_manager = PolicyManager::new(Path::new("/sys/fs/bpf/mypolicies")).unwrap();
     /// ```
-    pub fn new<P: AsRef<Path>>(bpf_path: P) -> Result<Self, GuardityError> {
+    pub fn new<P: AsRef<Path>>(bpf_path: P) -> Result<Self, EbpfguardError> {
         #[cfg(debug_assertions)]
         let bpf = BpfLoader::new()
             .map_pin_path(&bpf_path)
             .load(include_bytes_aligned!(
-                "../../target/bpfel-unknown-none/debug/guardity"
+                "../../target/bpfel-unknown-none/debug/ebpfguard"
             ))?;
         #[cfg(not(debug_assertions))]
         let bpf = BpfLoader::new()
             .map_pin_path(&bpf_path)
             .load(include_bytes_aligned!(
-                "../../target/bpfel-unknown-none/release/guardity"
+                "../../target/bpfel-unknown-none/release/ebpfguard"
             ))?;
 
         Ok(Self { bpf })
     }
 
     /// Attaches and returns a handle to all LSM hooks.
-    pub fn attach_all(&mut self) -> Result<All, GuardityError> {
+    pub fn attach_all(&mut self) -> Result<All, EbpfguardError> {
         let bprm_check_security = self.attach_bprm_check_security()?;
         let file_open = self.attach_file_open()?;
         let task_fix_setuid = self.attach_task_fix_setuid()?;
@@ -216,7 +216,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn manage_all(&mut self) -> Result<All, GuardityError> {
+    pub fn manage_all(&mut self) -> Result<All, EbpfguardError> {
         let bprm_check_security = self.manage_bprm_check_security()?;
         let file_open = self.manage_file_open()?;
         let task_fix_setuid = self.manage_task_fix_setuid()?;
@@ -232,7 +232,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_bprm_check_security(&mut self) -> Result<BprmCheckSecurity, GuardityError> {
+    pub fn attach_bprm_check_security(&mut self) -> Result<BprmCheckSecurity, EbpfguardError> {
         let mut bprm_check_security = self.manage_bprm_check_security()?;
         let program_link = self.attach_program("bprm_check_security")?;
         bprm_check_security.program_link = Some(program_link);
@@ -240,7 +240,7 @@ impl PolicyManager {
         Ok(bprm_check_security)
     }
 
-    pub fn manage_bprm_check_security(&mut self) -> Result<BprmCheckSecurity, GuardityError> {
+    pub fn manage_bprm_check_security(&mut self) -> Result<BprmCheckSecurity, EbpfguardError> {
         let perf_array = self
             .bpf
             .take_map("ALERT_BPRM_CHECK_SECURITY")
@@ -253,7 +253,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_file_open(&mut self) -> Result<FileOpen, GuardityError> {
+    pub fn attach_file_open(&mut self) -> Result<FileOpen, EbpfguardError> {
         let mut file_open = self.manage_file_open()?;
         let program_link = self.attach_program("file_open")?;
         file_open.program_link = Some(program_link);
@@ -261,7 +261,7 @@ impl PolicyManager {
         Ok(file_open)
     }
 
-    pub fn manage_file_open(&mut self) -> Result<FileOpen, GuardityError> {
+    pub fn manage_file_open(&mut self) -> Result<FileOpen, EbpfguardError> {
         let allowed_map = self.bpf.take_map("ALLOWED_FILE_OPEN").unwrap().try_into()?;
         let denied_map = self.bpf.take_map("DENIED_FILE_OPEN").unwrap().try_into()?;
         let perf_array = self.bpf.take_map("ALERT_FILE_OPEN").unwrap().try_into()?;
@@ -274,7 +274,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_task_fix_setuid(&mut self) -> Result<TaskFixSetuid, GuardityError> {
+    pub fn attach_task_fix_setuid(&mut self) -> Result<TaskFixSetuid, EbpfguardError> {
         let mut task_fix_setuid = self.manage_task_fix_setuid()?;
         let program_link = self.attach_program("task_fix_setuid")?;
         task_fix_setuid.program_link = Some(program_link);
@@ -282,7 +282,7 @@ impl PolicyManager {
         Ok(task_fix_setuid)
     }
 
-    pub fn manage_task_fix_setuid(&mut self) -> Result<TaskFixSetuid, GuardityError> {
+    pub fn manage_task_fix_setuid(&mut self) -> Result<TaskFixSetuid, EbpfguardError> {
         let allowed_map = self
             .bpf
             .take_map("ALLOWED_TASK_FIX_SETUID")
@@ -307,7 +307,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_socket_bind(&mut self) -> Result<SocketBind, GuardityError> {
+    pub fn attach_socket_bind(&mut self) -> Result<SocketBind, EbpfguardError> {
         let mut socket_bind = self.manage_socket_bind()?;
         let program_link = self.attach_program("socket_bind")?;
         socket_bind.program_link = Some(program_link);
@@ -315,7 +315,7 @@ impl PolicyManager {
         Ok(socket_bind)
     }
 
-    pub fn manage_socket_bind(&mut self) -> Result<SocketBind, GuardityError> {
+    pub fn manage_socket_bind(&mut self) -> Result<SocketBind, EbpfguardError> {
         let allowed_map = self
             .bpf
             .take_map("ALLOWED_SOCKET_BIND")
@@ -336,7 +336,7 @@ impl PolicyManager {
         })
     }
 
-    pub fn attach_socket_connect(&mut self) -> Result<SocketConnect, GuardityError> {
+    pub fn attach_socket_connect(&mut self) -> Result<SocketConnect, EbpfguardError> {
         let mut socket_connect = self.manage_socket_connect()?;
         let program_link = self.attach_program("socket_connect")?;
         socket_connect.program_link = Some(program_link);
@@ -344,7 +344,7 @@ impl PolicyManager {
         Ok(socket_connect)
     }
 
-    pub fn manage_socket_connect(&mut self) -> Result<SocketConnect, GuardityError> {
+    pub fn manage_socket_connect(&mut self) -> Result<SocketConnect, EbpfguardError> {
         let allowed_map_v4 = self
             .bpf
             .take_map("ALLOWED_SOCKET_CONNECT_V4")
@@ -381,7 +381,7 @@ impl PolicyManager {
         })
     }
 
-    fn attach_program(&mut self, name: &str) -> Result<LsmLink, GuardityError> {
+    fn attach_program(&mut self, name: &str) -> Result<LsmLink, EbpfguardError> {
         let btf = Btf::from_sys_fs()?;
         let program: &mut Lsm = self.bpf.program_mut(name).unwrap().try_into()?;
         program.load(name, &btf)?;
