@@ -1,21 +1,21 @@
 [package]
-name = "guardity-ebpf"
+name = "ebpfguard-ebpf"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 aya-bpf = { git = "https://github.com/aya-rs/aya", branch = "main" }
-guardity-common = { path = "../guardity-common" }
+ebpfguard-common = { path = "../ebpfguard-common" }
 
 [build-dependencies]
 aya-tool = { git = "https://github.com/aya-rs/aya", branch = "main" }
 
 [lib]
-name = "guardity_ebpf"
+name = "ebpfguard_ebpf"
 path = "src/lib.rs"
 
 [[bin]]
-name = "guardity"
+name = "ebpfguard"
 path = "src/main.rs"
 
 [profile.dev]

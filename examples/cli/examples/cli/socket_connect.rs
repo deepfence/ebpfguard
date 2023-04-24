@@ -1,5 +1,5 @@
 use cli_table::{Cell, Style, Table, TableStruct};
-use guardity::{policy::Addresses, PolicyManager};
+use ebpfguard::{policy::Addresses, PolicyManager};
 
 pub(crate) async fn list_socket_connect(
     policy_manager: &mut PolicyManager,

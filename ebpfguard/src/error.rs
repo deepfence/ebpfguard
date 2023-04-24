@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum GuardityError {
+pub enum EbpfguardError {
     #[error("Failed to load BPF program: {0}")]
     Bpf(#[from] aya::BpfError),
 

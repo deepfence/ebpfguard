@@ -2,7 +2,7 @@ use aya_bpf::{
     macros::map,
     maps::{HashMap, PerfEventArray},
 };
-use guardity_common::{alerts, policy};
+use ebpfguard_common::{alerts, policy};
 
 #[map]
 pub static ALERT_BPRM_CHECK_SECURITY: PerfEventArray<alerts::BprmCheckSecurity> =

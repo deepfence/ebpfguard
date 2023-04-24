@@ -4,7 +4,7 @@ use std::{
     path::PathBuf,
 };
 
-use guardity_common::policy as ebpf_policy;
+use ebpfguard_common::policy as ebpf_policy;
 use serde::{Deserialize, Serialize};
 
 use crate::fs;
@@ -37,7 +37,7 @@ pub enum Paths {
     Paths(Vec<PathBuf>),
 }
 
-// NOTE(vadorovsky): Converting from `guardity_common::Paths` to `Paths`
+// NOTE(vadorovsky): Converting from `ebpfguard_common::Paths` to `Paths`
 // requires resolving inodes to paths. Inode/path resolution is not a
 // symmetrical operation (path -> inode resolution is a simple file metadata
 // lookup, while inode -> path resolution requires more complex per-filesystem

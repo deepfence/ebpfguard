@@ -1,5 +1,5 @@
 use aya_bpf::{maps::HashMap, programs::LsmContext, BpfContext};
-use guardity_common::{
+use ebpfguard_common::{
     alerts,
     consts::INODE_WILDCARD,
     policy::{Paths, MAX_PATHS},
@@ -24,7 +24,7 @@ const MAX_DIR_DEPTH: usize = 16;
 ///
 /// ```rust
 /// use aya_bpf::{macros::lsm, programs::LsmContext};
-/// use guardity_ebpf::file_open;
+/// use ebpfguard_ebpf::file_open;
 ///
 /// #[lsm(name = "my_program")]
 /// pub fn my_program(ctx: LsmContext) -> i32 {

@@ -8,8 +8,8 @@ mod socket_bind;
 mod socket_connect;
 mod task_fix_setuid;
 
+use ebpfguard::{policy::reader, PolicyManager};
 use file_open::list_file_open;
-use guardity::{policy::reader, PolicyManager};
 use socket_bind::list_socket_bind;
 use socket_connect::list_socket_connect;
 use task_fix_setuid::list_task_fix_setuid;
@@ -18,7 +18,7 @@ use task_fix_setuid::list_task_fix_setuid;
 struct Args {
     #[clap(long, default_value = "/sys/fs/bpf")]
     bpffs_path: PathBuf,
-    #[clap(long, default_value = "guardity")]
+    #[clap(long, default_value = "ebpfguard")]
     bpffs_dir: PathBuf,
     #[command(subcommand)]
     subcommand: Sub,

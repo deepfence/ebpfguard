@@ -1,4 +1,4 @@
-use guardity_common::alerts;
+use ebpfguard_common::alerts;
 use std::{
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
     path::PathBuf,

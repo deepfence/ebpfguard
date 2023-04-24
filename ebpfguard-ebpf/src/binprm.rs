@@ -7,7 +7,7 @@ use crate::vmlinux::task_struct;
 /// # Examples
 ///
 /// ```rust
-/// use guardity_ebpf::binprm::current_binprm_inode;
+/// use ebpfguard_ebpf::binprm::current_binprm_inode;
 ///
 /// let inode = current_binprm_inode();
 /// ```

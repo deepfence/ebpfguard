@@ -1,5 +1,5 @@
 use aya_bpf::{cty::c_long, programs::LsmContext, BpfContext};
-use guardity_common::alerts;
+use ebpfguard_common::alerts;
 
 use crate::{binprm::current_binprm_inode, maps::ALERT_BPRM_CHECK_SECURITY, vmlinux::linux_binprm};
 
