@@ -69,8 +69,8 @@ Deny mount operation for all users.
     }
 ```
 
-Imports and cargo file are available in [example source code](examples/readme_mount). For more examples check out [EXAMPLES.md](doc/EXAMPLES.md).
-
+Imports and cargo file are available in [example source code](examples/readme_mount).
+For more examples check out [EXAMPLES.md](doc/examples.md).
 
 ## Supported LSM hooks
 
@@ -87,15 +87,15 @@ LSM hooks supported by Ebpfguard are:
 
 ## Prerequisites
 
-Check [PREREQUISISTES.md](doc/PREREQUISISTES.md) to set up your environment.
+Check [PREREQUISISTES.md](doc/prerequisites.md) to set up your environment.
 
 ## Development
 
-Check [Development.md](doc/DEVELOPMENT.md) for compillation and testing commands.
+Check [Development.md](doc/development.md) for compillation and testing commands.
 
 ## Get in touch
 
-Thank you for using Ebpfguard. Please feel welcome to participate in the [Deepfence community](doc/COMMUNITY.md).
+Thank you for using Ebpfguard. Please feel welcome to participate in the [Deepfence community](doc/community.md).
 
 * [Deepfence Community Website](https://community.deepfence.io) 
 * [<img src="https://img.shields.io/badge/slack-@deepfence-brightgreen.svg?logo=slack">](https://join.slack.com/t/deepfence-community/shared_invite/zt-podmzle9-5X~qYx8wMaLt9bGWwkSdgQ) Got a question, need some help?  Find the Deepfence team on Slack

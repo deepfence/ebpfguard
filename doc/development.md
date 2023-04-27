@@ -1,5 +1,6 @@
-
 # Development
+
+This section assumes that you previously fulfilled [prerequisites](prerequisites.md).
 
 All commands should be executed from repository/workspace root folder unless noted otherwise.
 

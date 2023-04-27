@@ -58,6 +58,8 @@ After that's done reboot your system.
 
 You need the Rust stable and nightly toolchains installed on your system, bpf-linker and bpftool binary.
 
+Install rust from https://rustup.rs. Further commands assume availabilty of rustup command.
+
 Install nightly toolchain:
 
 ```
