@@ -23,7 +23,7 @@ lockdown,capability,selinux,bpf
 
 If the output doesn't contain `bpf`, you need to enable BPF LSM by adding
 `lsm=[...],bpf` to your kernel config parameters. That can be achieved by
-executing the [enable-bpf-lsm.py](https://github.com/deepfence/ebpfguard/blob/main/enable-bpf-lsm.py.py) script.
+executing the [enable-bpf-lsm.py](https://github.com/deepfence/ebpfguard/blob/main/enable-bpf-lsm.py) script.
 
 This script will print modified contents of `/etc/default/grub` file to stdout.
 Either pipe it back directly to `/etc/default/grub` or save it somewhere 

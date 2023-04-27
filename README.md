@@ -70,7 +70,7 @@ Deny mount operation for all users.
 ```
 
 Imports and cargo file are available in [example source code](examples/readme_mount).
-For more examples check out [EXAMPLES.md](doc/examples.md).
+For more check out [examples doc](doc/examples.md).
 
 ## Supported LSM hooks
 
@@ -87,11 +87,11 @@ LSM hooks supported by Ebpfguard are:
 
 ## Prerequisites
 
-Check [PREREQUISISTES.md](doc/prerequisites.md) to set up your environment.
+Check [prerequisites doc](doc/prerequisites.md) to set up your environment.
 
 ## Development
 
-Check [Development.md](doc/development.md) for compillation and testing commands.
+Check [development doc](doc/development.md) for compillation and testing commands.
 
 ## Get in touch
 
