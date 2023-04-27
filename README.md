@@ -1,6 +1,27 @@
-[![Workflow Status](https://github.com/deepfence/ebpfguard/workflows/build-test/badge.svg)](https://github.com/deepfence/ebpfguard/actions?query=workflow)
+![Deepfence Logo](images/readme/deepfence-logo.png)
 
-# ebpfguard
+[![GitHub license](https://img.shields.io/github/license/deepfence/ebpfguard)](https://github.com/deepfence/ebpfguard/blob/master/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/deepfence/ebpfguard)](https://github.com/deepfence/ebpfguard/stargazers)
+[![Workflow Status](https://github.com/deepfence/ebpfguard/workflows/build-test/badge.svg)](https://github.com/deepfence/ebpfguard/actions?query=workflow)
+[![GitHub issues](https://img.shields.io/github/issues/deepfence/ebpfguard)](https://github.com/deepfence/ebpfguard/issues)
+[![Slack](https://img.shields.io/badge/slack-@deepfence-blue.svg?logo=slack)](https://join.slack.com/t/deepfence-community/shared_invite/zt-podmzle9-5X~qYx8wMaLt9bGWwkSdgQ)
+<h3 align="center">
+<a
+    href="https://runacap.com/ross-index/annual-2022/"
+    target="_blank"
+    rel="noopener"
+>
+    <img
+        style="width: 260px; height: 56px"
+        src="https://runacap.com/wp-content/uploads/2023/02/Annual_ROSS_badge_black_2022.svg"
+        alt="ROSS Index - Fastest Growing Open-Source Startups | Runa Capital"
+        width="260"
+        height="56"
+    />
+</a>
+</h3>
+
+# Ebpfguard
 
 **Ebpfguard** is a library for managing Linux security policies. It is based on
 [LSM hooks](https://www.kernel.org/doc/html/latest/admin-guide/LSM/index.html),
@@ -11,6 +32,8 @@ It's based on eBPF and [Aya](https://aya-rs.dev) library, but takes away
 the need to use them directly.
 
 ## Prerequisites
+
+### kernel capabilities
 
 First, you need to have a Linux kernel:
 * with BTF support
@@ -33,11 +56,123 @@ lockdown,capability,selinux,bpf
 
 If the output doesn't contain `bpf`, you need to enable BPF LSM by adding
 `lsm=[...],bpf` to your kernel config parameters. That can be achieved by
-executing the [following script](https://raw.githubusercontent.com/vadorovsky/enable-bpf-lsm/main/enable-bpf-lsm.py).
+executing the [enable-bpf-lsm.py](https://github.com/deepfence/ebpfguard/blob/main/enable-bpf-lsm.py.py) script.
 
-Then you need the Rust stable and nightly toolchains installed on your system,
-as well as bpf-linker. You can install these by following these
-[instructions](https://aya-rs.dev/book/start/development/).
+This script will print modified contents of `/etc/default/grub` file to stdout.
+Either pipe it back directly to `/etc/default/grub` or save it somewhere 
+and compare contents before swapping to a new version.
+
+Whole command with direct pipe:
+
+```bash
+$ ./enable-bpf.lsm.py | sudo tee /etc/default/grub 1>/dev/null
+```
+
+This file is used by grub2 to assemble final `grub.cfg`. To trigger reconfiguration
+use grub's mkconfig command with `-o <path to grub.cfg>` switch.
+
+Both command name and path to `grub.cfg` are distribution dependent.
+
+On ubuntu:
+
+```
+$ sudo grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+On fedora:
+
+```
+$ sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+```
+
+After that's done reboot your system.
+
+### rust toolchain and packages
+
+You need the Rust stable and nightly toolchains installed on your system, bpf-linker and bpftool binary.
+
+Install nightly toolchain:
+
+```
+$ rustup toolchain install nightly --component rust-src
+```
+
+Optionally add miri:
+
+```
+$ rustup component add miri --toolchain nightly
+```
+
+Finally install bpf-linker:
+
+```
+$ cargo install bpf-linker
+```
+
+This bpf-linker installation method works on linux x86_64 systems.
+For others refer to [aya-rs documentation](https://aya-rs.dev/book/start/development/).
+
+To install bpftool either use distro provided package or build it from [source](https://github.com/libbpf/bpftool).
+
+On ubuntu it is a part of linux-tools:
+
+```
+$ sudo apt install linux-tools-$(uname -r)
+```
+
+## Development
+
+All commands should be executed from repository/workspace root folder unless noted otherwise.
+
+### Compilation
+
+First compile ebpf bytecode with the following command. It will be embedded
+in userspace binary using aya.
+
+```
+$ cargo xtask build-ebpf
+```
+
+Then userspace code.
+
+```
+$ cargo build
+```
+
+### Tests
+
+Commands in this subsection mirror state of CI pipeline.
+
+Regular tests
+
+```
+$ cargo test
+```
+
+Formatting gateway. Drop check subflag to autoformat.
+
+```
+$ cargo fmt --all -- --check
+```
+
+Clippy lints.
+
+```
+$ cargo clippy --workspace -- --deny warnings
+```
+
+Miri verification.
+
+```
+$ cargo +nightly miri test --all-targets
+```
+
+Note that miri verification requires nightly toolchain as well as miri component. To add them execute:
+
+```
+$ rustup toolchain install nightly --component rust-src
+$ rustup component add miri --toolchain nightly
+```
 
 ## LSM hooks
 
@@ -54,157 +189,18 @@ LSM hooks supported by Ebpfguard are:
 
 ## Examples
 
-### Defining single policies
+For usage examples check [EXAMPLES.md](EXAMPLES.md).
 
-#### `file_open`
+## Get in touch
 
-The [file_open](https://github.com/deepfence/ebpfguard/tree/main/examples/file_open)
-example shows how to define a policy for `file_open` LSM hook as Rust code.
-It denies the given binary (or all processes, if none defined) from opening
-the given directory.
+Thank you for using Ebpfguard. Please feel welcome to participate in the [Deepfence community](COMMUNITY.md).
 
-To try it out, let's create a directory and a file inside it:
-
-```bash
-$ mkdir /tmp/test
-$ echo "foo" > /tmp/test/test
-```
-
-Then run our example policy program with:
-
-```bash
-$ RUST_LOG=info cargo xtask run --example file_open -- --path-to-deny /tmp/test
-```
-
-When trying to access that directory and file, you should see that these
-operations are denied:
-
-```bash
-$ ls /tmp/test/
-ls: cannot open directory '/tmp/test/': Operation not permitted
-$ cat /tmp/test/test
-cat: /tmp/test/test: Operation not permitted
-```
-
-The policy application should show logs like:
-
-```bash
-[2023-04-22T20:51:01Z INFO  file_open] file_open: pid=3001 subject=980333 path=9632
-[2023-04-22T20:51:03Z INFO  file_open] file_open: pid=3010 subject=980298 path=9633
-```
-#### mount
-
-The [mount](https://github.com/deepfence/ebpfguard/tree/main/examples/file_open)
-example shows how to define a policy for `sb_mount`, `sb_remount` and
-`sb_umount` LSM hooks as Rust code. It denies the mount operations for all
-processes except for the optionally given one.
-
-To try it out, let's create two directories:
-
-```bash
-$ mkdir /tmp/test1
-$ mkdir /tmp/test2
-```
-
-Then run our example policy program, first without providing any binary to
-allow mount for (so it's denied for all processes):
-
-```bash
-$ RUST_LOG=info cargo xtask run --example mount
-```
-
-Let's try to bind mount the first directory to the second one. It should
-fail with the following error:
-
-```bash
-sudo mount --bind /tmp/test1 /tmp/test2
-mount: /tmp/test2: permission denied.
-       dmesg(1) may have more information after failed mount system call.
-```
-
-And the policy program should show a log like:
-
-```bash
-[2023-04-23T21:02:58Z INFO  mount] sb_mount: pid=17363 subject=678150
-```
-
-Now let's try to allow mount operations for the mount binary:
-
-```bash
-$ RUST_LOG=info cargo xtask run --example mount -- --allow /usr/bin/mount
-```
-
-And try to bind mount the first directory to the second one again. It should
-succeed this time:
-
-```bash
-$ sudo mount --bind /tmp/test1 /tmp/test2
-$ mount | grep test
-tmpfs on /tmp/test2 type tmpfs (rw,nosuid,nodev,seclabel,nr_inodes=1048576,inode64)
-```
-
-#### `task_fix_setuid`
-
-The [task_fix_setuid](https://github.com/deepfence/ebpfguard/tree/main/examples/task_fix_setuid)
-example shows how to define a policy for `task_fix_setuid` LSM hook as Rust
-code. It denies the `setuid` operation for all processes except for the
-optionally given one.
-
-To try it out, run our example policy program, first without providing any
-binary to allow `setuid` for (so it's denied for all processes):
-
-```bash
-$ RUST_LOG=info cargo xtask run --example task_fix_setuid
-```
-
-Then try to use `sudo`. It should fail with the following error:
-
-```bash
-sudo -i
-sudo: PERM_ROOT: setresuid(0, -1, -1): Operation not permitted
-sudo: error initializing audit plugin sudoers_audit
-```
-
-And the policy program should show log like:
-
-```bash
-[2023-04-23T15:15:00Z INFO  task_fix_setuid] file_open: pid=25604 subject=674642 old_uid=1000 old_gid=1000 new_uid=0 new_gid=1000
-```
-
-Now, let's try to allow `setuid` for a specific binary. Let's use `sudo`:
-
-```bash
-$ RUST_LOG=info cargo xtask run --example task_fix_setuid -- --allow /usr/bin/sudo
-```
-
-Then try to use `sudo` again. It should work this time:
-
-```bash
-$ sudo -i
-# whoami
-root
-```
-
-### Daemon with CLI and YAML engine
-
-Run the daemon with:
-
-```bash
-$ RUST_LOG=info cargo xtask run --example daemon
-```
-
-Then manage the policies using the CLI:
-
-```bash
-$ cargo xtask run --example cli -- --help
-```
-
-You can apply policies from the
-[example YAML file](https://github.com/deepfence/ebpfguard/blob/main/examples/cli/policy.yaml):
-
-```bash
-$ cargo xtask run --example cli -- policy add --path examples/cli/policy.yaml
-```
+* [Deepfence Community Website](https://community.deepfence.io) 
+* [<img src="https://img.shields.io/badge/slack-@deepfence-brightgreen.svg?logo=slack">](https://join.slack.com/t/deepfence-community/shared_invite/zt-podmzle9-5X~qYx8wMaLt9bGWwkSdgQ) Got a question, need some help?  Find the Deepfence team on Slack
+* [![GitHub issues](https://img.shields.io/github/issues/deepfence/ebpfguard)](https://github.com/deepfence/ebpfguard/issues) Got a feature request or found a bug?  Raise an issue
+<!-- * [![Documentation](https://img.shields.io/badge/documentation-read-green)](https://community.deepfence.io/docs/ebpfguard/) Read the documentation in the [Deepfence Ebpfguard Documentation](https://community.deepfence.io/docs/ebpfguard/) -->
+<!-- * [productsecurity at deepfence dot io](SECURITY.md): Found a security issue? Share it in confidence -->
+* Find out more at [deepfence.io](https://deepfence.io/)
 
 ## License
 
