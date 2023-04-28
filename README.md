@@ -70,7 +70,7 @@ Deny mount operation for all users.
 ```
 
 Imports and cargo file are available in [example source code](examples/readme_mount).
-For more check out [examples doc](doc/examples.md).
+For more check out [examples doc](docs/gh/examples.md).
 
 ## Supported LSM hooks
 
@@ -87,20 +87,20 @@ LSM hooks supported by Ebpfguard are:
 
 ## Prerequisites
 
-Check [prerequisites doc](doc/prerequisites.md) to set up your environment.
+Check [prerequisites doc](docs/gh/prerequisites.md) to set up your environment.
 
 ## Development
 
-Check [development doc](doc/development.md) for compillation and testing commands.
+Check [development doc](docs/gh/development.md) for compillation and testing commands.
 
 ## Get in touch
 
-Thank you for using Ebpfguard. Please feel welcome to participate in the [Deepfence community](doc/community.md).
+Thank you for using Ebpfguard. Please feel welcome to participate in the [Deepfence community](docs/gh/community.md).
 
 * [Deepfence Community Website](https://community.deepfence.io) 
 * [<img src="https://img.shields.io/badge/slack-@deepfence-brightgreen.svg?logo=slack">](https://join.slack.com/t/deepfence-community/shared_invite/zt-podmzle9-5X~qYx8wMaLt9bGWwkSdgQ) Got a question, need some help?  Find the Deepfence team on Slack
 * [![GitHub issues](https://img.shields.io/github/issues/deepfence/ebpfguard)](https://github.com/deepfence/ebpfguard/issues) Got a feature request or found a bug?  Raise an issue
-<!-- * [![Documentation](https://img.shields.io/badge/documentation-read-green)](https://community.deepfence.io/docs/ebpfguard/) Read the documentation in the [Deepfence Ebpfguard Documentation](https://community.deepfence.io/docs/ebpfguard/) -->
+<!-- * [![Documentation](https://img.shields.io/badge/documentation-read-green)](https://community.deepfence.io/docs/gh/ebpfguard/) Read the documentation in the [Deepfence Ebpfguard Documentation](https://community.deepfence.io/docs/gh/ebpfguard/) -->
 <!-- * [productsecurity at deepfence dot io](SECURITY.md): Found a security issue? Share it in confidence -->
 * Find out more at [deepfence.io](https://deepfence.io/)
 
