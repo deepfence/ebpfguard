@@ -7,7 +7,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Deepfence Ebpfguard',
-  tagline: 'Library for seamless utilization of BPF LSM hooks',
+  tagline: 'Aya based library for seamless utilization of LSM BPF hooks',
   url: 'http://ebpfguard.local',
   baseUrl: '/',
 

@@ -7,10 +7,20 @@ First, you need to have a Linux kernel:
 * with BPF LSM support (kernels >= 5.7)
 
 You can check if your kernel has BTF support by checking whether file
-`/sys/kernel/btf/vmlinux` exists. You can also check the kernel configuration:
+`/sys/kernel/btf/vmlinux` exists.
+
+You can also check the kernel configuration. Note that location of this configuration is distribution specific.
+
+SUSE:
 
 ```bash
 $ zgrep CONFIG_DEBUG_INFO_BTF /proc/config.gz
+CONFIG_DEBUG_INFO_BTF=y
+```
+
+Ubuntu:
+```bash
+$ zgrep CONFIG_DEBUG_INFO_BTF /boot/config-"$(uname -r)"
 CONFIG_DEBUG_INFO_BTF=y
 ```
 
