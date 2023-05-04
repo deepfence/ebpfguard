@@ -1,12 +1,11 @@
 [package]
-name = "readme_mount"
+name = "demo_socket_listen"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 anyhow = { version = "1", features = ["backtrace"] }
+clap = { version = "4.2", features = ["derive"] }
 ebpfguard = { path = "../../ebpfguard" }
 env_logger = "0.10"
 log = "0.4"
