@@ -1,4 +1,4 @@
-use aya_bpf::{maps::HashMap, programs::LsmContext, BpfContext};
+use aya_bpf::{maps::HashMap, programs::LsmContext, BpfContext, cty::c_long};
 use ebpfguard_common::{alerts, consts::INODE_WILDCARD};
 
 use crate::{
@@ -23,18 +23,18 @@ use crate::{
 ///     sb_mount(ctx).into()
 /// }
 /// ```
-pub fn sb_mount(ctx: LsmContext) -> Action {
-    let binprm_inode = current_binprm_inode();
+pub fn sb_mount(ctx: LsmContext) -> Result<Action, c_long> {
+    let binprm_inode = current_binprm_inode()?;
 
     if unsafe { ALLOWED_SB_MOUNT.get(&INODE_WILDCARD).is_some() } {
-        return check_conditions_and_alert(&ctx, &DENIED_SB_MOUNT, binprm_inode, Mode::Denylist);
+        return Ok(check_conditions_and_alert(&ctx, &DENIED_SB_MOUNT, binprm_inode, Mode::Denylist));
     }
 
     if unsafe { DENIED_SB_MOUNT.get(&INODE_WILDCARD).is_some() } {
-        return check_conditions_and_alert(&ctx, &ALLOWED_SB_MOUNT, binprm_inode, Mode::Allowlist);
+        return Ok(check_conditions_and_alert(&ctx, &ALLOWED_SB_MOUNT, binprm_inode, Mode::Allowlist));
     }
 
-    Action::Allow
+    Ok(Action::Allow)
 }
 
 #[inline(always)]

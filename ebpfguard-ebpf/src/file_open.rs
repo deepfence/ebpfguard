@@ -1,4 +1,4 @@
-use aya_bpf::{maps::HashMap, programs::LsmContext, BpfContext};
+use aya_bpf::{cty::c_long, maps::HashMap, programs::LsmContext, BpfContext};
 use ebpfguard_common::{
     alerts,
     consts::INODE_WILDCARD,
@@ -31,39 +31,39 @@ const MAX_DIR_DEPTH: usize = 16;
 ///     file_open::file_open(ctx).into()
 /// }
 /// ```
-pub fn file_open(ctx: LsmContext) -> Action {
+pub fn file_open(ctx: LsmContext) -> Result<Action, c_long> {
     let file: *const file = unsafe { ctx.arg(0) };
 
-    let binprm_inode = current_binprm_inode();
+    let binprm_inode = current_binprm_inode()?;
     let inode = unsafe { (*(*(*file).f_path.dentry).d_inode).i_ino };
 
     if let Some(paths) = unsafe { ALLOWED_FILE_OPEN.get(&INODE_WILDCARD) } {
         if paths.paths[0] == 0 {
-            return check_conditions_and_alert(
+            return Ok(check_conditions_and_alert(
                 &ctx,
                 &DENIED_FILE_OPEN,
                 file,
                 inode,
                 binprm_inode,
                 Mode::Denylist,
-            );
+            ));
         }
     }
 
     if let Some(paths) = unsafe { DENIED_FILE_OPEN.get(&INODE_WILDCARD) } {
         if paths.paths[0] == 0 {
-            return check_conditions_and_alert(
+            return Ok(check_conditions_and_alert(
                 &ctx,
                 &ALLOWED_FILE_OPEN,
                 file,
                 inode,
                 binprm_inode,
                 Mode::Allowlist,
-            );
+            ));
         }
     }
 
-    Action::Allow
+    Ok(Action::Allow)
 }
 
 #[inline(always)]

@@ -53,7 +53,7 @@ fn socket_connect_v4(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Actio
     let sockaddr_in: *const sockaddr_in = sockaddr as *const sockaddr_in;
     let addr = u32::from_be(unsafe { (*sockaddr_in).sin_addr.s_addr });
 
-    let binprm_inode = current_binprm_inode();
+    let binprm_inode = current_binprm_inode()?;
 
     if let Some(addrs) = unsafe { ALLOWED_SOCKET_CONNECT_V4.get(&INODE_WILDCARD) } {
         if addrs.all() {
@@ -89,7 +89,7 @@ fn socket_connect_v6(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Actio
     let sockaddr_in6: sockaddr_in6 = unsafe { bpf_probe_read_kernel(sockaddr_in6)? };
     let addr = unsafe { sockaddr_in6.sin6_addr.in6_u.u6_addr8 };
 
-    let binprm_inode = current_binprm_inode();
+    let binprm_inode = current_binprm_inode()?;
 
     if let Some(addrs) = unsafe { ALLOWED_SOCKET_CONNECT_V6.get(&INODE_WILDCARD) } {
         if addrs.all() {

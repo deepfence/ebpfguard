@@ -19,7 +19,10 @@ pub fn prog_bprm_check_security(ctx: LsmContext) -> i32 {
 
 #[lsm(name = "file_open")]
 pub fn prog_file_open(ctx: LsmContext) -> i32 {
-    file_open(ctx).into()
+    match file_open(ctx) {
+        Ok(ret) => ret.into(),
+        Err(_) => 0,
+    }
 }
 
 #[lsm(name = "task_fix_setuid")]
@@ -32,22 +35,34 @@ pub fn prog_task_fix_setuid(ctx: LsmContext) -> i32 {
 
 #[lsm(name = "sb_mount")]
 pub fn prog_sb_mount(ctx: LsmContext) -> i32 {
-    sb_mount(ctx).into()
+    match sb_mount(ctx) {
+        Ok(ret) => ret.into(),
+        Err(_) => 0,
+    }
 }
 
 #[lsm(name = "sb_remount")]
 pub fn prog_sb_remount(ctx: LsmContext) -> i32 {
-    sb_remount(ctx).into()
+    match sb_remount(ctx) {
+        Ok(ret) => ret.into(),
+        Err(_) => 0,
+    }
 }
 
 #[lsm(name = "sb_umount")]
 pub fn prog_sb_umount(ctx: LsmContext) -> i32 {
-    sb_umount(ctx).into()
+    match sb_umount(ctx) {
+        Ok(ret) => ret.into(),
+        Err(_) => 0,
+    }
 }
 
 #[lsm(name = "socket_bind")]
 pub fn prog_socket_bind(ctx: LsmContext) -> i32 {
-    socket_bind(ctx).into()
+    match socket_bind(ctx) {
+        Ok(ret) => ret.into(),
+        Err(_) => 0,
+    }
 }
 
 #[lsm(name = "socket_connect")]
