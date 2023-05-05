@@ -41,15 +41,8 @@ Clippy lints.
 $ cargo clippy --workspace -- --deny warnings
 ```
 
-Miri verification.
+Miri verification. Requires optional dependencies from [miri section](prerequisites.md#miri)
 
 ```
 $ cargo +nightly miri test --all-targets
-```
-
-Note that miri verification requires nightly toolchain as well as miri component. To add them execute:
-
-```
-$ rustup toolchain install nightly --component rust-src
-$ rustup component add miri --toolchain nightly
 ```

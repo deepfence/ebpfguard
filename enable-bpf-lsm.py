@@ -28,10 +28,10 @@ def main():
     bpf_line = None
     with open("/etc/default/grub") as fd:
         for i, l in enumerate(fd):
-            if l.startswith("GRUB_CMDLINE_LINUX="):
+            if l.startswith("GRUB_CMDLINE_LINUX_DEFAULT="):
                 if bpf_line:
                     log.warning(
-                        "Multiple GRUB_CMDLINE_LINUX. Only last one takes effect. Check your configuration. This script will modify last occurence only."
+                        "Multiple GRUB_CMDLINE_LINUX_DEFAULT. Only last one takes effect. Check your configuration. This script will modify last occurrence only."
                     )
                 bpf_line = (i, l)
             else:
@@ -39,23 +39,22 @@ def main():
     idx, effective_grub_cmdline = bpf_line
 
     if not effective_grub_cmdline:
-        log.error("""No line starting with "GRUB_CMDLINE_LINUX=".""")
+        log.error("""No line starting with "GRUB_CMDLINE_LINUX_DEFAULT=".""")
         sys.exit(-2)
 
     if "lsm" in effective_grub_cmdline:
         log.warning(
-            f"""LSMs explicitly declared in /etc/default/grub GRUB_CMDLINE_LINUX. Edit manually and append bpf value.
-        Whole line could look like GRUB_CMDLINE_LINUX="lsm={','.join(lsms)}" """
+            f"""LSMs explicitly declared in /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT. Edit manually and append bpf value."""
         )
         sys.exit(-3)
 
-    modified_cmdline = effective_grub_cmdline.lstrip('GRUB_CMDLINE_LINUX="').rstrip('"\n')
+    modified_cmdline = effective_grub_cmdline.lstrip('GRUB_CMDLINE_LINUX_DEFAULT="').rstrip('"\n')
     cmdline_lsm = "lsm={}".format(",".join(lsms))
     if modified_cmdline == "":
         modified_cmdline = cmdline_lsm
     else:
         modified_cmdline += " " + cmdline_lsm
-    modified_cmdline = 'GRUB_CMDLINE_LINUX="{}"\n'.format(modified_cmdline)
+    modified_cmdline = 'GRUB_CMDLINE_LINUX_DEFAULT="{}"\n'.format(modified_cmdline)
 
     content.insert(idx, modified_cmdline)
 
