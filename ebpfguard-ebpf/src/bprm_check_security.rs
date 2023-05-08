@@ -7,7 +7,7 @@ pub fn bprm_check_security(ctx: LsmContext) -> Result<i32, c_long> {
     let new_binprm: *const linux_binprm = unsafe { ctx.arg(0) };
     let argc = unsafe { (*new_binprm).argc };
 
-    let old_binprm_inode = current_binprm_inode();
+    let old_binprm_inode = current_binprm_inode()?;
 
     if argc < 1 {
         ALERT_BPRM_CHECK_SECURITY.output(

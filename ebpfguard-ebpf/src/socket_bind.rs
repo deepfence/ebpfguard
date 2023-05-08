@@ -1,4 +1,4 @@
-use aya_bpf::{programs::LsmContext, BpfContext};
+use aya_bpf::{cty::c_long, programs::LsmContext, BpfContext};
 use ebpfguard_common::{alerts, consts::INODE_WILDCARD, policy::MAX_PORTS};
 
 use crate::{
@@ -30,21 +30,21 @@ use crate::{
 /// }
 /// ```
 #[inline(always)]
-pub fn socket_bind(ctx: LsmContext) -> Action {
+pub fn socket_bind(ctx: LsmContext) -> Result<Action, c_long> {
     let sockaddr: *const sockaddr = unsafe { ctx.arg(1) };
 
     if unsafe { (*sockaddr).sa_family } != AF_INET {
-        return Action::Allow;
+        return Ok(Action::Allow);
     }
 
     let sockaddr_in: *const sockaddr_in = sockaddr as *const sockaddr_in;
     let port = u16::from_be(unsafe { (*sockaddr_in).sin_port });
 
     if port == 0 {
-        return Action::Allow;
+        return Ok(Action::Allow);
     }
 
-    let binprm_inode = current_binprm_inode();
+    let binprm_inode = current_binprm_inode()?;
 
     if let Some(ports) = unsafe { ALLOWED_SOCKET_BIND.get(&INODE_WILDCARD) } {
         if ports.all() {
@@ -55,7 +55,7 @@ pub fn socket_bind(ctx: LsmContext) -> Action {
                         &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
-                    return Action::Deny;
+                    return Ok(Action::Deny);
                 }
                 if ports.ports[..MAX_PORTS - 1].contains(&port) {
                     ALERT_SOCKET_BIND.output(
@@ -63,7 +63,7 @@ pub fn socket_bind(ctx: LsmContext) -> Action {
                         &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
-                    return Action::Deny;
+                    return Ok(Action::Deny);
                 }
             }
 
@@ -74,7 +74,7 @@ pub fn socket_bind(ctx: LsmContext) -> Action {
                         &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
-                    return Action::Deny;
+                    return Ok(Action::Deny);
                 }
                 if ports.ports[..MAX_PORTS - 1].contains(&port) {
                     ALERT_SOCKET_BIND.output(
@@ -82,12 +82,12 @@ pub fn socket_bind(ctx: LsmContext) -> Action {
                         &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                         0,
                     );
-                    return Action::Deny;
+                    return Ok(Action::Deny);
                 }
             }
         } else {
             if ports.ports[..MAX_PORTS - 1].contains(&port) {
-                return Action::Allow;
+                return Ok(Action::Allow);
             }
         }
     }
@@ -96,19 +96,19 @@ pub fn socket_bind(ctx: LsmContext) -> Action {
         if ports.all() {
             if let Some(ports) = unsafe { ALLOWED_SOCKET_BIND.get(&INODE_WILDCARD) } {
                 if ports.all() {
-                    return Action::Allow;
+                    return Ok(Action::Allow);
                 }
                 if ports.ports[..MAX_PORTS - 1].contains(&port) {
-                    return Action::Allow;
+                    return Ok(Action::Allow);
                 }
             }
 
             if let Some(ports) = unsafe { ALLOWED_SOCKET_BIND.get(&binprm_inode) } {
                 if ports.all() {
-                    return Action::Allow;
+                    return Ok(Action::Allow);
                 }
                 if ports.ports[..MAX_PORTS - 1].contains(&port) {
-                    return Action::Allow;
+                    return Ok(Action::Allow);
                 }
             }
 
@@ -117,7 +117,7 @@ pub fn socket_bind(ctx: LsmContext) -> Action {
                 &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                 0,
             );
-            return Action::Deny;
+            return Ok(Action::Deny);
         } else {
             if ports.ports[..MAX_PORTS - 1].contains(&port) {
                 ALERT_SOCKET_BIND.output(
@@ -125,10 +125,10 @@ pub fn socket_bind(ctx: LsmContext) -> Action {
                     &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
                     0,
                 );
-                return Action::Deny;
+                return Ok(Action::Deny);
             }
         }
     }
 
-    Action::Allow
+    Ok(Action::Allow)
 }

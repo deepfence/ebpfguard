@@ -35,7 +35,7 @@ pub fn task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
     let new_uid = unsafe { (*new).uid.val };
     let new_gid = unsafe { (*new).gid.val };
 
-    let binprm_inode = current_binprm_inode();
+    let binprm_inode = current_binprm_inode()?;
 
     if unsafe { ALLOWED_TASK_FIX_SETUID.get(&INODE_WILDCARD) }.is_some() {
         if unsafe { DENIED_TASK_FIX_SETUID.get(&binprm_inode).is_some() } {
