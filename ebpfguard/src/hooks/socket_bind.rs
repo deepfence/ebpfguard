@@ -3,6 +3,7 @@ use aya::{
     programs::lsm::LsmLink,
 };
 use ebpfguard_common::{alerts as ebpf_alerts, policy as ebpf_policy};
+
 use tokio::sync::mpsc::Receiver;
 
 use crate::{alerts, error::EbpfguardError, policy};

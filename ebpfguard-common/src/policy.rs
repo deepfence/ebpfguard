@@ -10,7 +10,7 @@ pub struct Paths {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Ports {
     pub ports: [u16; MAX_PORTS],
 }

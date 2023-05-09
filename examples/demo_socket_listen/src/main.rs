@@ -14,6 +14,8 @@ struct Opt {
     bpffs_path: PathBuf,
     #[clap(long, default_value = "demo_socket_connect")]
     bpffs_dir: PathBuf,
+    #[clap(long)]
+    deny: Vec<u16>,
 }
 
 #[tokio::main]
@@ -46,14 +48,17 @@ async fn main() -> anyhow::Result<()> {
     let policy = ebpfguard::policy::SocketBind {
         subject: PolicySubject::All,
         allow: ebpfguard::policy::Ports::All,
-        deny: ebpfguard::policy::Ports::Ports(vec![8000]),
+        deny: ebpfguard::policy::Ports::Ports(opt.deny.clone()),
     };
     socket_bind
         .add_policy(policy)
         .await
         .context("failed to install policy")?;
 
-    info!("Will block next 4 attempts to listen on a port 8000");
+    info!(
+        "Will block next 4 attempts to listen on a ports {:?}",
+        opt.deny
+    );
 
     for i in 0..4 {
         if let Some(alert) = rx.recv().await {
