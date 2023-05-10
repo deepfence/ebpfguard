@@ -229,6 +229,22 @@ pub struct PolicyManager {
 }
 
 impl PolicyManager {
+    /// Default path for storage of eBPFGuard maps
+    const DEFAULT_BPFFS_MAPS_PATH: &str = "/sys/fs/bpf/ebpfguard_default";
+
+    /// Creates a new policy manager with default maps path.
+    ///
+    /// Assumes mounted bpf filesystem under /sys/fs/bpf.
+    /// # Example
+    /// ```no_run
+    /// use ebpfguard::PolicyManager;
+    ///
+    /// let mut policy_manager = PolicyManager::with_default_path().unwrap();
+    /// ```
+    pub fn with_default_path() -> Result<Self, EbpfguardError> {
+        Self::new(Self::DEFAULT_BPFFS_MAPS_PATH)
+    }
+
     /// Creates a new policy manager.
     ///
     /// # Example

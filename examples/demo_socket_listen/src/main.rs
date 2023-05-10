@@ -1,11 +1,11 @@
-use std::{
-    fs::{create_dir_all, remove_dir_all},
-    path::PathBuf,
-};
+use std::{fs, path::PathBuf};
 
 use anyhow::Context;
 use clap::Parser;
-use ebpfguard::{policy::PolicySubject, PolicyManager};
+use ebpfguard::{
+    policy::{PolicySubject, Ports, SocketBind},
+    PolicyManager,
+};
 use log::info;
 
 #[derive(Debug, Parser)]
@@ -28,32 +28,31 @@ async fn main() -> anyhow::Result<()> {
     log::set_max_level(logger.filter());
     log::set_boxed_logger(Box::from(logger)).context("Failed to set up logger")?;
 
-    // Create a directory where ebpfguard policy manager can store its BPF
-    // objects (maps).
-    let bpf_path = opt.bpffs_path.join(opt.bpffs_dir);
-    create_dir_all(&bpf_path)?;
+    let bpf_path: PathBuf = opt.bpffs_path.join(opt.bpffs_dir);
+    fs::create_dir_all(&bpf_path)?;
 
     let mut policy_manager =
-        PolicyManager::new(&bpf_path).context("couldn't create policy manager")?;
+        PolicyManager::new(&bpf_path).context("kernel verifier rejected eBPF hooks object file")?;
 
     let mut socket_bind = policy_manager
         .attach_socket_bind()
-        .context("couldn't load eBPF bytecode to kernel")?;
+        .context("couldn't attach socket_bind hook")?;
 
     let mut rx = socket_bind
         .alerts()
         .await
-        .context("couldn't get notifications channel for bind events")?;
+        .context("couldn't get alerts channel for bind events")?;
 
-    let policy = ebpfguard::policy::SocketBind {
+    let policy = SocketBind {
         subject: PolicySubject::All,
-        allow: ebpfguard::policy::Ports::All,
-        deny: ebpfguard::policy::Ports::Ports(opt.deny.clone()),
+        allow: Ports::All,
+        deny: Ports::Ports(opt.deny.clone()),
     };
+
     socket_bind
         .add_policy(policy)
         .await
-        .context("failed to install policy")?;
+        .context("failed to add policy")?;
 
     info!(
         "Will block next 4 attempts to listen on a ports {:?}",
@@ -70,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     info!("Exiting...");
-    remove_dir_all(&bpf_path).context("Failed to clean up bpf maps directory")?;
+    fs::remove_dir_all(&bpf_path).context("Failed to clean up bpf maps directory")?;
 
     Ok(())
 }
