@@ -8,7 +8,7 @@ default = []
 user = ["aya"]
 
 [dependencies]
-aya = { version = ">=0.11", optional = true }
+aya = { git = "https://github.com/deepfence/aya-rs", branch = "btf-fixes", optional=true }
 
 [lib]
 path = "src/lib.rs"

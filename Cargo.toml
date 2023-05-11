@@ -5,6 +5,7 @@ members = [
     "xtask",
     "examples/*",
 ]
+exclude = ["ebpfguard-ebpf"]
 
 [patch.crates-io]
 aya = { git = "https://github.com/deepfence/aya-rs", branch = "btf-fixes" }
