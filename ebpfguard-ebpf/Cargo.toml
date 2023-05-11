@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aya-bpf = { git = "https://github.com/aya-rs/aya", branch = "main" }
+aya-bpf = { git = "https://github.com/deepfence/aya-rs", branch = "btf-fixes" }
 ebpfguard-common = { path = "../ebpfguard-common" }
 
 [build-dependencies]
-aya-tool = { git = "https://github.com/aya-rs/aya", branch = "main" }
+aya-tool = { git = "https://github.com/deepfence/aya-rs", branch = "btf-fixes" }
 
 [lib]
 name = "ebpfguard_ebpf"

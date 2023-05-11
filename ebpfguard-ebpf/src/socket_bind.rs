@@ -5,6 +5,7 @@ use crate::{
     binprm::current_binprm_inode,
     consts::AF_INET,
     maps::{ALERT_SOCKET_BIND, ALLOWED_SOCKET_BIND, DENIED_SOCKET_BIND},
+    sockaddr_in_sin_port, sockaddr_sa_family,
     vmlinux::{sockaddr, sockaddr_in},
     Action,
 };
@@ -33,12 +34,12 @@ use crate::{
 pub fn socket_bind(ctx: LsmContext) -> Result<Action, c_long> {
     let sockaddr: *const sockaddr = unsafe { ctx.arg(1) };
 
-    if unsafe { (*sockaddr).sa_family } != AF_INET {
+    if unsafe { sockaddr_sa_family(sockaddr) } != AF_INET {
         return Ok(Action::Allow);
     }
 
     let sockaddr_in: *const sockaddr_in = sockaddr as *const sockaddr_in;
-    let port = u16::from_be(unsafe { (*sockaddr_in).sin_port });
+    let port = u16::from_be(unsafe { sockaddr_in_sin_port(sockaddr_in) });
 
     if port == 0 {
         return Ok(Action::Allow);

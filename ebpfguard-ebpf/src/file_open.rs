@@ -7,6 +7,7 @@ use ebpfguard_common::{
 
 use crate::{
     binprm::current_binprm_inode,
+    dentry_i_ino, file_dentry, file_inode,
     maps::{ALERT_FILE_OPEN, ALLOWED_FILE_OPEN, DENIED_FILE_OPEN},
     vmlinux::file,
     Action, Mode,
@@ -35,7 +36,7 @@ pub fn file_open(ctx: LsmContext) -> Result<Action, c_long> {
     let file: *const file = unsafe { ctx.arg(0) };
 
     let binprm_inode = current_binprm_inode()?;
-    let inode = unsafe { (*(*(*file).f_path.dentry).d_inode).i_ino };
+    let inode = unsafe { file_inode(file) };
 
     if let Some(paths) = unsafe { ALLOWED_FILE_OPEN.get(&INODE_WILDCARD) } {
         if paths.paths[0] == 0 {
@@ -145,12 +146,12 @@ fn check_parents(
     mut previous_inode: u64,
     mode: &Mode,
 ) -> Option<Action> {
-    let mut parent_dentry = unsafe { (*(*file).f_path.dentry).d_parent };
+    let mut parent_dentry = unsafe { file_dentry(file) };
     for _ in 0..MAX_DIR_DEPTH {
         if parent_dentry.is_null() {
             break;
         }
-        let inode = unsafe { (*(*parent_dentry).d_inode).i_ino };
+        let inode = unsafe { dentry_i_ino(parent_dentry) };
         if inode == previous_inode {
             break;
         }

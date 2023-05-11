@@ -3,6 +3,7 @@ use ebpfguard_common::{alerts, consts::INODE_WILDCARD};
 
 use crate::{
     binprm::current_binprm_inode,
+    cred_gid_val, cred_uid_val,
     maps::{ALERT_TASK_FIX_SETUID, ALLOWED_TASK_FIX_SETUID, DENIED_TASK_FIX_SETUID},
     vmlinux::cred,
 };
@@ -30,10 +31,10 @@ pub fn task_fix_setuid(ctx: LsmContext) -> Result<i32, c_long> {
     let new: *const cred = unsafe { ctx.arg(0) };
     let old: *const cred = unsafe { ctx.arg(1) };
 
-    let old_uid = unsafe { (*old).uid.val };
-    let old_gid = unsafe { (*old).gid.val };
-    let new_uid = unsafe { (*new).uid.val };
-    let new_gid = unsafe { (*new).gid.val };
+    let old_uid = unsafe { cred_uid_val(old) };
+    let old_gid = unsafe { cred_gid_val(old) };
+    let new_uid = unsafe { cred_uid_val(new) };
+    let new_gid = unsafe { cred_gid_val(new) };
 
     let binprm_inode = current_binprm_inode()?;
 
