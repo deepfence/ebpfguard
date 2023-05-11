@@ -20,17 +20,19 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
+          targets: x86_64-unknown-linux-musl
           components: rustfmt, clippy, miri, rust-src
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+          targets: x86_64-unknown-linux-musl
           components: rustfmt, clippy
 
       - name: Install bpf-linker
         run: |
-          cargo install bpf-linker
+          cargo install bpf-linker --git https://github.com/noboruma/bpf-linker
 
       - name: Build eBPF code
         run: |
