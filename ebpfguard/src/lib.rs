@@ -230,7 +230,7 @@ pub struct PolicyManager {
 
 impl PolicyManager {
     /// Default path for storage of eBPFGuard maps
-    const DEFAULT_BPFFS_MAPS_PATH: &str = "/sys/fs/bpf/ebpfguard_default";
+    pub const DEFAULT_BPFFS_MAPS_PATH: &str = "/sys/fs/bpf/ebpfguard_default";
 
     /// Creates a new policy manager with default maps path.
     ///
@@ -242,6 +242,7 @@ impl PolicyManager {
     /// let mut policy_manager = PolicyManager::with_default_path().unwrap();
     /// ```
     pub fn with_default_path() -> Result<Self, EbpfguardError> {
+        std::fs::create_dir_all(Self::DEFAULT_BPFFS_MAPS_PATH)?;
         Self::new(Self::DEFAULT_BPFFS_MAPS_PATH)
     }
 
@@ -260,13 +261,13 @@ impl PolicyManager {
         let bpf = BpfLoader::new()
             .map_pin_path(&bpf_path)
             .load(include_bytes_aligned!(
-                "../../target/bpfel-unknown-none/debug/ebpfguard"
+                "../../ebpfguard-ebpf/ebpfguard.debug.obj"
             ))?;
         #[cfg(not(debug_assertions))]
         let bpf = BpfLoader::new()
             .map_pin_path(&bpf_path)
             .load(include_bytes_aligned!(
-                "../../target/bpfel-unknown-none/release/ebpfguard"
+                "../../ebpfguard-ebpf/ebpfguard.release.obj"
             ))?;
 
         Ok(Self { bpf })
