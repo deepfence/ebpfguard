@@ -24,11 +24,12 @@ fn main() {
     ];
 
     let bindings = aya_tool::generate(
-        InputFile::Btf(PathBuf::from("/sys/kernel/btf/vmlinux")),
+        InputFile::Header(PathBuf::from("src/vmlinux.h")),
         &names,
         &[],
     )
     .unwrap();
+    println!("cargo:rerun-if-changed=src/src/vmlinux.h");
 
     let mut out = File::create(dest_path).unwrap();
     write!(out, "{}", bindings).unwrap();

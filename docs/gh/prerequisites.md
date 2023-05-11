@@ -138,7 +138,7 @@ $ cargo install bindgen-cli
 Install bpf-linker:
 
 ```
-$ cargo install bpf-linker
+$ cargo install bpf-linker --git https://github.com/noboruma/bpf-linker
 ```
 
 bpf-linker installation on architectures other than x86_64 may be more involved. Refer to [aya-rs documentation](https://aya-rs.dev/book/start/development/) for instructions.
