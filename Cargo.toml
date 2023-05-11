@@ -7,4 +7,4 @@ members = [
 ]
 
 [patch.crates-io]
-aya = { git = "https://github.com/aya-rs/aya", branch = "main" }
+aya = { git = "https://github.com/deepfence/aya-rs", branch = "btf-fixes" }

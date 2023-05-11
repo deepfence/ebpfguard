@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aya = { git = "https://github.com/aya-rs/aya", branch = "main", features=["async_tokio"] }
+aya = { git = "https://github.com/deepfence/aya-rs", branch = "btf-fixes", features=["async_tokio"] }
 bytes = "1.4"
 clap = { version = "4.2", features = ["derive"] }
 ebpfguard-common = { path = "../ebpfguard-common", features = ["user"] }

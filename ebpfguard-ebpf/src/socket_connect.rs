@@ -14,6 +14,7 @@ use crate::{
         ALERT_SOCKET_CONNECT, ALLOWED_SOCKET_CONNECT_V4, ALLOWED_SOCKET_CONNECT_V6,
         DENIED_SOCKET_CONNECT_V4, DENIED_SOCKET_CONNECT_V6,
     },
+    sockaddr_in6_sin6_addr_in6_u_u6_addr8, sockaddr_in_sin_addr_s_addr, sockaddr_sa_family,
     vmlinux::{sockaddr, sockaddr_in, sockaddr_in6},
     Action, Mode,
 };
@@ -39,7 +40,7 @@ use crate::{
 /// ```
 pub fn socket_connect(ctx: LsmContext) -> Result<Action, c_long> {
     let sockaddr: *const sockaddr = unsafe { ctx.arg(1) };
-    let sa_family = unsafe { (*sockaddr).sa_family };
+    let sa_family = unsafe { sockaddr_sa_family(sockaddr) };
 
     match sa_family {
         AF_INET => socket_connect_v4(ctx, sockaddr),
@@ -51,7 +52,7 @@ pub fn socket_connect(ctx: LsmContext) -> Result<Action, c_long> {
 #[inline(always)]
 fn socket_connect_v4(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Action, c_long> {
     let sockaddr_in: *const sockaddr_in = sockaddr as *const sockaddr_in;
-    let addr = u32::from_be(unsafe { (*sockaddr_in).sin_addr.s_addr });
+    let addr = u32::from_be(unsafe { sockaddr_in_sin_addr_s_addr(sockaddr_in) });
 
     let binprm_inode = current_binprm_inode()?;
 
@@ -87,7 +88,8 @@ fn socket_connect_v6(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Actio
     let sockaddr_in6: *const sockaddr_in6 = sockaddr as *const sockaddr_in6;
 
     let sockaddr_in6: sockaddr_in6 = unsafe { bpf_probe_read_kernel(sockaddr_in6)? };
-    let addr = unsafe { sockaddr_in6.sin6_addr.in6_u.u6_addr8 };
+    let addr: [u8; 16] = [0; 16];
+    unsafe { sockaddr_in6_sin6_addr_in6_u_u6_addr8(&sockaddr_in6, &addr) };
 
     let binprm_inode = current_binprm_inode()?;
 
