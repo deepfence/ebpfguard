@@ -1,0 +1,3 @@
+ebpfguard-ebpf/src/vmlinux.h linguist-vendored
+docs/** linguist-documentation
+ebpfguard-ebpf/*.obj linguist-generated
