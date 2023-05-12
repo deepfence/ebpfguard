@@ -6,17 +6,16 @@ All commands should be executed from repository/workspace root folder unless not
 
 ## Compilation
 
-First compile ebpf bytecode with the following command. It will be embedded
-in userspace binary using aya.
-
-```
-$ cargo xtask build-ebpf
-```
-
-Then userspace code.
+Just utilize cargo infrastructure.
 
 ```
 $ cargo build
+```
+
+If you make changes to any code under `ebpfguard-ebpf` and/or `ebpfguard-common` make sure to rebuild eBPF objects.
+
+```
+$ cargo xtask build-ebpf
 ```
 
 ## Tests
@@ -41,8 +40,18 @@ Clippy lints.
 $ cargo clippy --workspace -- --deny warnings
 ```
 
-Miri verification. Requires optional dependencies from [miri section](prerequisites.md#miri)
+Miri verification.
 
 ```
 $ cargo +nightly miri test --all-targets
 ```
+
+## Contributing
+
+Before setting up a PR make sure to run
+
+```
+cargo clippy --fix && cargo fmt
+```
+
+And verify/commit any resulting changes.

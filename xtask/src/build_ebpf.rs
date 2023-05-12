@@ -29,6 +29,30 @@ impl std::fmt::Display for Architecture {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum BuildType {
+    Debug,
+    Release,
+}
+
+impl From<bool> for BuildType {
+    fn from(value: bool) -> Self {
+        match value {
+            true => Self::Release,
+            false => Self::Debug,
+        }
+    }
+}
+
+impl std::fmt::Display for BuildType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Release => "release",
+            Self::Debug => "debug",
+        })
+    }
+}
+
 #[derive(Debug, Parser)]
 pub struct Options {
     /// Set the endianness of the BPF target
@@ -49,7 +73,9 @@ pub fn build_ebpf(opts: Options) -> Result<(), anyhow::Error> {
         "-Z",
         "build-std=core",
     ];
-    if opts.release {
+    let build_type = BuildType::from(opts.release);
+
+    if matches!(build_type, BuildType::Release) {
         args.push("--release")
     }
 
@@ -64,5 +90,12 @@ pub fn build_ebpf(opts: Options) -> Result<(), anyhow::Error> {
         .status()
         .expect("failed to build bpf program");
     assert!(status.success());
+
+    let source = format!("target/{}/{}/ebpfguard", opts.target, build_type);
+    let destination = format!("ebpfguard-ebpf/ebpfguard.{}.obj", build_type);
+
+    std::fs::copy(source, destination)
+        .expect("Couldn't copy compiled eBPFObject to destination path");
+
     Ok(())
 }
