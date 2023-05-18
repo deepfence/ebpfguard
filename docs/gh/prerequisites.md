@@ -119,6 +119,7 @@ On ubuntu 22.04 the following command installs all required tools.
 ```bash
 $ apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    clang \
     libclang-dev \
     linux-tools-$(uname -r)
 ```
@@ -128,6 +129,12 @@ $ apt-get update && apt-get install -y --no-install-recommends \
 You need the Rust stable and nightly toolchains installed on your system, bpf-linker and bpftool binary.
 
 Install rust from https://rustup.rs. Further commands assume availability of rustup command.
+
+Install musl toolchain for crosscompatibility.
+
+```bash
+$ rustup target add x86_64-unknown-linux-musl
+```
 
 Install bindgen-cli:
 

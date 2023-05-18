@@ -3,28 +3,28 @@ use std::{path::PathBuf, process::Command};
 use clap::Parser;
 
 #[derive(Debug, Copy, Clone)]
-pub enum Architecture {
+pub enum EbpfArchitecture {
     BpfEl,
     BpfEb,
 }
 
-impl std::str::FromStr for Architecture {
+impl std::str::FromStr for EbpfArchitecture {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
-            "bpfel-unknown-none" => Architecture::BpfEl,
-            "bpfeb-unknown-none" => Architecture::BpfEb,
+            "bpfel-unknown-none" => EbpfArchitecture::BpfEl,
+            "bpfeb-unknown-none" => EbpfArchitecture::BpfEb,
             _ => return Err("invalid target".to_owned()),
         })
     }
 }
 
-impl std::fmt::Display for Architecture {
+impl std::fmt::Display for EbpfArchitecture {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
-            Architecture::BpfEl => "bpfel-unknown-none",
-            Architecture::BpfEb => "bpfeb-unknown-none",
+            EbpfArchitecture::BpfEl => "bpfel-unknown-none",
+            EbpfArchitecture::BpfEb => "bpfeb-unknown-none",
         })
     }
 }
@@ -57,7 +57,7 @@ impl std::fmt::Display for BuildType {
 pub struct Options {
     /// Set the endianness of the BPF target
     #[clap(default_value = "bpfel-unknown-none", long)]
-    pub target: Architecture,
+    pub target: EbpfArchitecture,
     /// Build the release target
     #[clap(long)]
     pub release: bool,

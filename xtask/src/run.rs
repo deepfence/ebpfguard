@@ -3,13 +3,16 @@ use std::process::Command;
 use anyhow::Context as _;
 use clap::Parser;
 
-use crate::build_ebpf::{build_ebpf, Architecture, Options as BuildOptions};
+use crate::build_ebpf::{build_ebpf, EbpfArchitecture, Options as BuildOptions};
 
 #[derive(Debug, Parser)]
 pub struct Options {
     /// Set the endianness of the BPF target
     #[clap(default_value = "bpfel-unknown-none", long)]
-    pub bpf_target: Architecture,
+    pub bpf_target: EbpfArchitecture,
+    /// Set userspace compilation target
+    #[clap(default_value = "x86_64-unknown-linux-musl", long)]
+    pub userspace_target: String,
     /// Build and run the release target
     #[clap(long)]
     pub release: bool,
@@ -50,7 +53,8 @@ pub fn run(opts: Options) -> Result<(), anyhow::Error> {
     // profile we are building (release or debug)
     let profile = if opts.release { "release" } else { "debug" };
     let example = opts.example;
-    let bin_path = format!("target/{profile}/examples/{example}");
+    let userspace_target = opts.userspace_target;
+    let bin_path = format!("target/{userspace_target}/{profile}/examples/{example}");
 
     // arguments to pass to the application
     let mut run_args: Vec<_> = opts.run_args.iter().map(String::as_str).collect();
