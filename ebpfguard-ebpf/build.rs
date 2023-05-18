@@ -29,7 +29,7 @@ fn main() {
         &[],
     )
     .unwrap();
-    println!("cargo:rerun-if-changed=src/src/vmlinux.h");
+    println!("cargo:rerun-if-changed=src/vmlinux.h");
 
     let mut out = File::create(dest_path).unwrap();
     write!(out, "{}", bindings).unwrap();
