@@ -2,6 +2,11 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum EbpfguardError {
+    #[error(
+        "BPF LSM module is not enabled. Check prerequisites doc for instructions how to enable it."
+    )]
+    BpfLsmModuleDisabled,
+
     #[error("Failed to load BPF program: {0}")]
     Bpf(#[from] aya::BpfError),
 

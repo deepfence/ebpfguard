@@ -257,6 +257,13 @@ impl PolicyManager {
     /// let mut policy_manager = PolicyManager::new(Path::new("/sys/fs/bpf/mypolicies")).unwrap();
     /// ```
     pub fn new<P: AsRef<Path>>(bpf_path: P) -> Result<Self, EbpfguardError> {
+        let bpf_lsm_enabled = std::fs::read_to_string("/sys/kernel/security/lsm")?
+            .split(',')
+            .any(|x| x.to_lowercase() == "bpf");
+        if !bpf_lsm_enabled {
+            return Err(EbpfguardError::BpfLsmModuleDisabled);
+        }
+
         #[cfg(debug_assertions)]
         let bpf = BpfLoader::new()
             .map_pin_path(&bpf_path)
