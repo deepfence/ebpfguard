@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use aya::{
     include_bytes_aligned,
@@ -33,6 +33,10 @@ impl PolicyManager {
     /// let mut policy_manager = PolicyManager::with_default_path().unwrap();
     /// ```
     pub fn with_default_path() -> Result<Self, EbpfguardError> {
+        let path = PathBuf::from(Self::DEFAULT_BPFFS_MAPS_PATH);
+        if path.exists() {
+            std::fs::remove_dir_all(path)?;
+        }
         std::fs::create_dir_all(Self::DEFAULT_BPFFS_MAPS_PATH)?;
         Self::new(Self::DEFAULT_BPFFS_MAPS_PATH)
     }
