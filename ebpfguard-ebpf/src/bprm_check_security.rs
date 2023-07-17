@@ -15,7 +15,7 @@ pub fn bprm_check_security(ctx: LsmContext) -> Result<i32, c_long> {
     if argc < 1 {
         ALERT_BPRM_CHECK_SECURITY.output(
             &ctx,
-            &alerts::BprmCheckSecurity::new(ctx.pid() as u32, old_binprm_inode),
+            &alerts::BprmCheckSecurity::new(ctx.pid(), old_binprm_inode),
             0,
         );
         return Ok(-1);

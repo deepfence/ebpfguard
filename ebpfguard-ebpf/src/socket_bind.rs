@@ -86,10 +86,8 @@ pub fn socket_bind(ctx: LsmContext) -> Result<Action, c_long> {
                     return Ok(Action::Deny);
                 }
             }
-        } else {
-            if ports.ports[..MAX_PORTS - 1].contains(&port) {
-                return Ok(Action::Allow);
-            }
+        } else if ports.ports[..MAX_PORTS - 1].contains(&port) {
+            return Ok(Action::Allow);
         }
     }
 
@@ -119,15 +117,13 @@ pub fn socket_bind(ctx: LsmContext) -> Result<Action, c_long> {
                 0,
             );
             return Ok(Action::Deny);
-        } else {
-            if ports.ports[..MAX_PORTS - 1].contains(&port) {
-                ALERT_SOCKET_BIND.output(
-                    &ctx,
-                    &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
-                    0,
-                );
-                return Ok(Action::Deny);
-            }
+        } else if ports.ports[..MAX_PORTS - 1].contains(&port) {
+            ALERT_SOCKET_BIND.output(
+                &ctx,
+                &alerts::SocketBind::new(ctx.pid(), binprm_inode, port),
+                0,
+            );
+            return Ok(Action::Deny);
         }
     }
 
