@@ -57,3 +57,9 @@ jobs:
       - name: Run miri
         run: |
           cargo +nightly miri test --all-targets
+
+      # TODO(tjonak): needs a vm/qemu with bpf caps
+      # - name: Run sudo tests
+      #   run: |
+      #     cd tests
+      #     cargo test -- --nocapture
