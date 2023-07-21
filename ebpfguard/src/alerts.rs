@@ -1,4 +1,5 @@
 use ebpfguard_common::alerts;
+use serde::Serialize;
 use std::{
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
     path::PathBuf,
@@ -6,9 +7,9 @@ use std::{
 
 use crate::policy::PolicySubject;
 
-pub trait Alert {}
+pub trait Alert: Serialize {}
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct BprmCheckSecurity {
     pub pid: u32,
     pub subject: PolicySubject,
@@ -25,7 +26,7 @@ impl From<alerts::BprmCheckSecurity> for BprmCheckSecurity {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct FileOpen {
     pub pid: u32,
     pub subject: PolicySubject,
@@ -44,7 +45,7 @@ impl From<alerts::FileOpen> for FileOpen {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SbMount {
     pub pid: u32,
     pub subject: PolicySubject,
@@ -61,7 +62,7 @@ impl From<alerts::SbMount> for SbMount {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SbRemount {
     pub pid: u32,
     pub subject: PolicySubject,
@@ -78,7 +79,7 @@ impl From<alerts::SbRemount> for SbRemount {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SbUmount {
     pub pid: u32,
     pub subject: PolicySubject,
@@ -95,7 +96,7 @@ impl From<alerts::SbUmount> for SbUmount {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SocketBind {
     pub pid: u32,
     pub subject: PolicySubject,
@@ -114,7 +115,7 @@ impl From<alerts::SocketBind> for SocketBind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SocketConnect {
     pub pid: u32,
     pub subject: PolicySubject,
@@ -138,7 +139,7 @@ impl From<alerts::SocketConnect> for SocketConnect {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct TaskFixSetuid {
     pub pid: u32,
     pub subject: PolicySubject,
