@@ -120,6 +120,7 @@ pub struct SocketConnect {
     pub pid: u32,
     pub subject: PolicySubject,
     pub addr: IpAddr,
+    pub port: u16,
 }
 
 impl Alert for SocketConnect {}
@@ -135,6 +136,7 @@ impl From<alerts::SocketConnect> for SocketConnect {
             pid: alert.pid,
             subject: PolicySubject::Binary(PathBuf::from(alert.binprm_inode.to_string())),
             addr,
+            port: alert.port,
         }
     }
 }

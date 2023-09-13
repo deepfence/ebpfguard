@@ -14,7 +14,7 @@ use crate::{
         ALERT_SOCKET_CONNECT, ALLOWED_SOCKET_CONNECT_V4, ALLOWED_SOCKET_CONNECT_V6,
         DENIED_SOCKET_CONNECT_V4, DENIED_SOCKET_CONNECT_V6,
     },
-    sockaddr_in6_sin6_addr_in6_u_u6_addr8, sockaddr_in_sin_addr_s_addr, sockaddr_sa_family,
+    sockaddr_in6_sin6_addr_in6_u_u6_addr8, sockaddr_in_sin_addr_s_addr, sockaddr_sa_family, sockaddr_in_sin_port,
     vmlinux::{sockaddr, sockaddr_in, sockaddr_in6},
     Action, Mode,
 };
@@ -40,6 +40,7 @@ use crate::{
 /// ```
 pub fn socket_connect(ctx: LsmContext) -> Result<Action, c_long> {
     let sockaddr: *const sockaddr = unsafe { ctx.arg(1) };
+
     let sa_family = unsafe { sockaddr_sa_family(sockaddr) };
 
     match sa_family {
@@ -53,6 +54,7 @@ pub fn socket_connect(ctx: LsmContext) -> Result<Action, c_long> {
 fn socket_connect_v4(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Action, c_long> {
     let sockaddr_in: *const sockaddr_in = sockaddr as *const sockaddr_in;
     let addr = u32::from_be(unsafe { sockaddr_in_sin_addr_s_addr(sockaddr_in) });
+    let port = u16::from_be(unsafe { sockaddr_in_sin_port(sockaddr_in) });
 
     let binprm_inode = current_binprm_inode()?;
 
@@ -62,6 +64,7 @@ fn socket_connect_v4(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Actio
                 &ctx,
                 &DENIED_SOCKET_CONNECT_V4,
                 addr,
+                port,
                 binprm_inode,
                 Mode::Denylist,
             ));
@@ -74,6 +77,7 @@ fn socket_connect_v4(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Actio
                 &ctx,
                 &ALLOWED_SOCKET_CONNECT_V4,
                 addr,
+                port,
                 binprm_inode,
                 Mode::Allowlist,
             ));
@@ -86,6 +90,7 @@ fn socket_connect_v4(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Actio
 #[inline(always)]
 fn socket_connect_v6(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Action, c_long> {
     let sockaddr_in6: *const sockaddr_in6 = sockaddr as *const sockaddr_in6;
+    let port = u16::from_be(unsafe { sockaddr_in_sin_port(sockaddr as *const sockaddr_in) });
 
     let sockaddr_in6: sockaddr_in6 = unsafe { bpf_probe_read_kernel(sockaddr_in6)? };
     let addr: [u8; 16] = [0; 16];
@@ -99,6 +104,7 @@ fn socket_connect_v6(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Actio
                 &ctx,
                 &DENIED_SOCKET_CONNECT_V6,
                 addr,
+                port,
                 binprm_inode,
                 Mode::Denylist,
             ));
@@ -111,6 +117,7 @@ fn socket_connect_v6(ctx: LsmContext, sockaddr: *const sockaddr) -> Result<Actio
                 &ctx,
                 &ALLOWED_SOCKET_CONNECT_V6,
                 addr,
+                port,
                 binprm_inode,
                 Mode::Allowlist,
             ));
@@ -125,6 +132,7 @@ fn check_conditions_and_alert_v4(
     ctx: &LsmContext,
     map: &HashMap<u64, Ipv4Addrs>,
     addr: u32,
+    port: u16,
     binprm_inode: u64,
     mode: Mode,
 ) -> Action {
@@ -132,7 +140,7 @@ fn check_conditions_and_alert_v4(
         Action::Deny => {
             ALERT_SOCKET_CONNECT.output(
                 ctx,
-                &alerts::SocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr),
+                &alerts::SocketConnect::new_ipv4(ctx.pid(), binprm_inode, addr, port),
                 0,
             );
             Action::Deny
@@ -146,6 +154,7 @@ fn check_conditions_and_alert_v6(
     ctx: &LsmContext,
     map: &HashMap<u64, Ipv6Addrs>,
     addr: [u8; 16],
+    port: u16,
     binprm_inode: u64,
     mode: Mode,
 ) -> Action {
@@ -153,7 +162,7 @@ fn check_conditions_and_alert_v6(
         Action::Deny => {
             ALERT_SOCKET_CONNECT.output(
                 ctx,
-                &alerts::SocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr),
+                &alerts::SocketConnect::new_ipv6(ctx.pid(), binprm_inode, addr, port),
                 0,
             );
             Action::Deny
