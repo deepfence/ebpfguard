@@ -170,10 +170,11 @@ pub struct SocketConnect {
     pub addr_v4: u32,
     _padding2: u32,
     pub addr_v6: [u8; 16],
+    pub port: u16,
 }
 
 impl SocketConnect {
-    pub fn new_ipv4(pid: u32, binprm_inode: u64, addr_v4: u32) -> Self {
+    pub fn new_ipv4(pid: u32, binprm_inode: u64, addr_v4: u32, port: u16) -> Self {
         Self {
             pid,
             _padding1: 0,
@@ -181,10 +182,11 @@ impl SocketConnect {
             addr_v4,
             _padding2: 0,
             addr_v6: [0; 16],
+            port,
         }
     }
 
-    pub fn new_ipv6(pid: u32, binprm_inode: u64, addr_v6: [u8; 16]) -> Self {
+    pub fn new_ipv6(pid: u32, binprm_inode: u64, addr_v6: [u8; 16], port: u16) -> Self {
         Self {
             pid,
             _padding1: 0,
@@ -192,6 +194,7 @@ impl SocketConnect {
             addr_v4: 0,
             _padding2: 0,
             addr_v6,
+            port,
         }
     }
 }

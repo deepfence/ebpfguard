@@ -21,7 +21,7 @@ pub struct PolicyManager {
 
 impl PolicyManager {
     /// Default path for storage of eBPFGuard maps
-    pub const DEFAULT_BPFFS_MAPS_PATH: &str = "/sys/fs/bpf/ebpfguard_default";
+    pub const DEFAULT_BPFFS_MAPS_PATH: &'static str = "/sys/fs/bpf/ebpfguard_default";
 
     /// Creates a new policy manager with default maps path.
     ///
