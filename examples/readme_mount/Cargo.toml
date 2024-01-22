@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = { version = "1", features = ["backtrace"] }
 ebpfguard = { path = "../../ebpfguard" }
-env_logger = "0.10"
+env_logger = "0.11"
 log = "0.4"
 tokio = { version = "1.25", features = ["macros", "rt", "rt-multi-thread", "net", "signal", "sync"] }
